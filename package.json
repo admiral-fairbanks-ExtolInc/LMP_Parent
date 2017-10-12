@@ -1,0 +1,44 @@
+{
+  "name": "learning_html",
+  "version": "1.0.0",
+  "description": "WebServer for LMP Prototype",
+  "main": "reloader.js",
+  "scripts": {
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/admiral-fairbanks-ExtolInc/LMP_Parent"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/admiral-fairbanks-ExtolInc/learning_html/issues"
+  },
+  "homepage": "https://github.com/admiral-fairbanks-ExtolInc/learning_html#readme",
+  "dependencies": {
+    "bootstrap": "^4.0.0-beta",
+    "browser-sync": "^2.13.0",
+    "flot": "^0.8.0-alpha",
+    "font-awesome": "^4.7.0",
+    "grunt-cli": "^1.2.0",
+    "gulp": "^3.9.1",
+    "gulp-header": "^1.8.7",
+    "gulp-less": "^3.1.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-uglify": "^1.5.4",
+    "jquery": "^3.2.1",
+    "moment": "^2.19.1",
+    "nanotimer": "^0.3.15",
+    "popper.js": "^1.12.5",
+    "timer": "0.0.2"
+  },
+  "devDependencies": {
+    "connect": "^3.6.5",
+    "express": "^4.16.2",
+    "graceful-fs": "^4.1.11",
+    "grunt": "^1.0.1",
+    "gulp-clean-css": "^3.9.0",
+    "minimatch": "^3.0.4"
+  }
+}
