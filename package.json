@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/admiral-fairbanks-ExtolInc/learning_html#readme",
   "dependencies": {
+    "bluebird": "^3.5.1",
     "bootstrap": "^4.0.0-beta",
     "browser-sync": "^2.13.0",
     "flot": "^0.8.0-alpha",
@@ -30,12 +31,17 @@
     "jquery": "^3.2.1",
     "moment": "^2.19.1",
     "nanotimer": "^0.3.15",
+    "pm2": "^2.7.2",
     "popper.js": "^1.12.5",
     "timer": "0.0.2"
   },
   "devDependencies": {
     "connect": "^3.6.5",
+    "eslint": "^4.10.0",
+    "eslint-config": "^0.3.0",
+    "eslint-config-google": "^0.9.1",
     "express": "^4.16.2",
+    "google": "^2.1.0",
     "graceful-fs": "^4.1.11",
     "grunt": "^1.0.1",
     "gulp-clean-css": "^3.9.0",
