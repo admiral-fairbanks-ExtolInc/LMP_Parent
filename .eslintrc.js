@@ -1,3 +1,3 @@
 module.exports = {
-    "extends": "eslit-config-google"
+    "extends": "airbnb"
 };
