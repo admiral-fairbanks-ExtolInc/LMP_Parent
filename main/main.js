@@ -1,4 +1,4 @@
-const Data = require('../data/gather_data.js');
+const Data = require('../data/gather-data.js');
 const Gpio = require('onoff').Gpio;
 const NanoTimer = require('nanotimer');
 const co = require('co');
