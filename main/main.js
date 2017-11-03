@@ -45,7 +45,7 @@ Digital_Ins = [Start_Sig_In, Stop_Sig_In, Full_Stroke_Sig_In],
 Digital_Outs = [Extend_Press_Out, Cooling_Air_Out, Cycle_Complete_Out, LMP_Flted_Out],
 Temp_Info, Datalogging_Info, I2C_Ready = false, db_created, System_Initialized,
 Reading_And_Logging_Active = false,
-Info_Buffers[Data.Child_Addresses.length];
+Info_Buffers[Data.childAddresses.length];
 var url = 'mongodb://localhost:27017/mydb';
 
 //Timer Definitions
@@ -79,7 +79,7 @@ Promise.resolve()
       db_created = true;
     });
   )
-  .then(Data.populate_database();)
+  .then(Data.populateDatabase();)
   .then(() => {
     if (Heaters_Mapped && I2C_Ready) System_Initialized = true;
     else console.log("System did not setup correctly");
@@ -111,13 +111,13 @@ Full_Stroke_Pin.watch((err, value) {
 //Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 var I2C_Promise = Promise.resolve()
 //Broadcast out Status
-.then(Data.exchange.Broadcast_Data([Start_Sig_In.Value, Stop_Sig_In.Value,
+.then(Data.exchange.broadcastData([Start_Sig_In.Value, Stop_Sig_In.Value,
   Full_Stroke_Sig_In.Value, Datalogging_Info]);)
 //Then, read data from each child controller
-.then(Data.exchange.Read_Data(Info_Buffers);)
+.then(Data.exchange.readData(Info_Buffers);)
 //Then, process the data obtained from the children
 //storing any datalogging info
-.then(Data.exchange.Process_Data(Info_Buffers, Child_Statuses);)
+.then(Data.exchange.processData(Info_Buffers, Child_Statuses);)
 //Set this flag false once complete so it can begin again on next interrupt
 .then(() => {Reading_And_Logging_Active = false;})
 //Then update system variables and write outputs
