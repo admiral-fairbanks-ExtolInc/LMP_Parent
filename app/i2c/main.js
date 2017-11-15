@@ -1,170 +1,162 @@
-const Data = require('../data/gather-data.js');
-const Gpio = require('onoff').Gpio;
+const Data = require('./data/gather-data');
+const { Gpio } = require('onoff');
 const NanoTimer = require('nanotimer');
-const co = require('co');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
-const i2c = Promise.promisifyAllrequire('i2c-bus');
-const Dig_In = [5, 6, 13], Dig_Out = [16, 19, 20, 26];
+const i2c = Promise.promisifyAll(require('i2c-bus'));
 
-var Start_Sig_In = {
+const digIn = [5, 6, 13];
+const digOut = [16, 19, 20, 26];
+const startSigIn = {
   Value: 0,
-  Pin: Dig_In[0],
-  Type: "Dig_In"
-},
-Stop_Sig_In = {
+  Pin: digIn[0],
+  Type: 'digIn',
+};
+const stopSigIn = {
   Value: 0,
-  Pin: Dig_In[1],
-  Type: "Dig_In"
-}
-Full_Stroke_Sig_In = {
+  Pin: digIn[1],
+  Type: 'digIn',
+};
+const fullStrokeSigIn = {
   Value: 0,
-  Pin: Dig_In[2],
-  Type: "Dig_In"
-},
-Extend_Press_Out =
+  Pin: digIn[2],
+  Type: 'digIn',
+};
+const extendPressOut = {
   Value: 0,
-  Pin: Dig_Out[0],
-  Type: "Dig_Out"
-},
-Cooling_Air_Out =
+  Pin: digOut[0],
+  Type: 'digOut',
+};
+const coolingAirOut = {
   Value: 0,
-  Pin: Dig_Out[1],
-  Type: "Dig_Out"
-},
-Cycle_Complete_Out =
+  Pin: digOut[1],
+  Type: 'digOut',
+};
+const cycleCompleteOut = {
   Value: 0,
-  Pin: Dig_Out[2],
-  Type: "Dig_Out"
-},
-LMP_Flted_Out =
+  Pin: digOut[2],
+  Type: 'digOut',
+};
+const lmpFltedOut = {
   Value: 0,
-  Pin: Dig_Out[3],
-  Type: "Dig_Out"
-},
-Digital_Ins = [Start_Sig_In, Stop_Sig_In, Full_Stroke_Sig_In],
-Digital_Outs = [Extend_Press_Out, Cooling_Air_Out, Cycle_Complete_Out, LMP_Flted_Out],
-Temp_Info, Datalogging_Info, I2C_Ready = false, db_created, System_Initialized,
-Reading_And_Logging_Active = false,
-Info_Buffers[Data.childAddresses.length];
-var url = 'mongodb://localhost:27017/mydb';
-
-//Timer Definitions
-var I2C_Tmr = new NanoTimer();
-//End Timer Definitions
-
-//IO Configuration
-Start_Sig_Pin = new Gpio(5, 'in');
-Stop_Sig_Pin = new Gpio(6, 'in');
-Full_Stroke_Pin = new Gpio(13, 'in');
-Extend_Press_Pin = new Gpio(16, 'out');
-Cooling_Air_Pin = new Gpio(19, 'out');
-Cycle_Complete_Pin = new Gpio(20, 'out');
-LMP_Flted_Pin = new Gpio(26, 'out');
+  Pin: digOut[3],
+  Type: 'digOut',
+};
+const url = 'mongodb://localhost:27017/mydb';
+const i2cTmr = new NanoTimer();
+const app = express();
+// IO Configuration
+const startSigPin = new Gpio(5, 'in');
+const stopSigPin = new Gpio(6, 'in');
+const fullStrokePin = new Gpio(13, 'in');
+const extendPressPin = new Gpio(16, 'out');
+const coolingAirPin = new Gpio(19, 'out');
+const cycleCompletePin = new Gpio(20, 'out');
+const lmpFltedPin = new Gpio(26, 'out');
 // End IO Config
+const infoBuffers = new Array([Data.childAddresses.length]);
 
-//Setup Loop
-Promise.resolve()
-  .then(
-    i2c1 = i2c.open(1)
-    .then((err) => { // Opens I2C Channel
-      if (err) {console.log(err);}
-      else {I2C_Ready = true;}
-    });
-  )
-  .then(
-    MongoClient.connect(url)
-    .then((err, database) => {
-      if (err) console.log(err);
-      db = database;
-      db_created = true;
-    });
-  )
-  .then(Data.populateDatabase();)
+let tempInfo;
+let dataloggingInfo;
+let i2cReady;
+let db;
+let dbCreated;
+let systemInitialized;
+let readingAndLoggingActive;
+let i2c1;
+let childStatuses;
+let logRequestSent;
+let heatersMapped;
+
+// Sets up Timed interrupt for Reading/Writing I2C and Storing Data
+const i2cPromise = Promise.resolve()
+  // Broadcast out Status
+  .then(Data.broadcastData([startSigIn.Value, stopSigIn.Value,
+    fullStrokeSigIn.Value, dataloggingInfo]))
+  // Then, read data from each child controller
+  .then(Data.readData(infoBuffers))
+  // Then, process the data obtained from the children
+  // storing any datalogging info
+  .then(Data.processData(infoBuffers))
+  // Set this flag false once complete so it can begin again on next interrupt
+  .then(() => { readingAndLoggingActive = false; })
+  // Then update system variables and write outputs
   .then(() => {
-    if (Heaters_Mapped && I2C_Ready) System_Initialized = true;
-    else console.log("System did not setup correctly");
+    // Stores Temp info in Pond JS timeseries format
+
+
+    // Checks if all modules are at setpoint. If so, Parent needs
+    // to send out Extend Press signal
+    extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
+    // Checks if all modules are at release. If so, Parent needs
+    // to send out Cooling Air signal
+    coolingAirOut.Value = childStatuses.every(elem => elem.heaterAtRelease);
+    // Checks if all Modules are at Cycle Complete. If so,
+    // Parent needs to send out Cycle Complete Signal
+    cycleCompleteOut.Value = childStatuses.every(elem => elem.heaterCycleComplete);
+    if (cycleCompleteOut.Value && !logRequestSent) dataloggingInfo = true;
+    else if (!cycleCompleteOut.Value && logRequestSent) {
+      logRequestSent = false;
+    }
+    // Checks to see if any modules are faulted. If so, Parent
+    // needs to send out LMP Faulted signal
+    lmpFltedOut.Value = childStatuses.some(elem => elem.heaterFaulted);
+    extendPressPin.write(extendPressOut.Value);
+    coolingAirPin.write(coolingAirOut.Value);
+    cycleCompletePin.write(cycleCompleteOut.Value);
+    lmpFltedPin.write(lmpFltedOut.Value);
   });
 
+// Setup Loop
+Promise.resolve()
+  .then(() => {
+    i2c1 = i2c.open(1)
+      .then((err) => { // Opens I2C Channel
+        if (err) throw (err);
+        else i2cReady = true;
+      });
+  })
+  .then(MongoClient.connect(url)
+    .then((err, database) => {
+      if (err) throw (err);
+      db = database;
+      dbCreated = true;
+    }))
+  .then(Data.populateDatabase())
+  .then(() => {
+    if (heatersMapped && i2cReady) systemInitialized = true;
+    else console.log('System did not setup correctly');
+  });
 
-
-//Watch Input Pins, Update value accordingly
-Start_Sig_Pin.watch((err, value) {
+// Watch Input Pins, Update value accordingly
+startSigPin.watch((err, value) => {
   if (err) throw err;
-  Start_Sig_In.value = value;
+  startSigIn.value = value;
 });
-Stop_Sig_Pin.watch((err, value) {
+stopSigPin.watch((err, value) => {
   if (err) throw err;
-  Stop_Sig_In.value = value;
+  stopSigIn.value = value;
 });
-Full_Stroke_Pin.watch((err, value) {
+fullStrokePin.watch((err, value) => {
   if (err) throw err;
-  Full_Stroke_Sig_In.value = value;
+  fullStrokeSigIn.value = value;
 });
-//End Watch Input Pins
+// End Watch Input Pins
 
-
-
-
-
-
-
-//Sets up Timed interrupt for Reading/Writing I2C and Storing Data
-var I2C_Promise = Promise.resolve()
-//Broadcast out Status
-.then(Data.exchange.broadcastData([Start_Sig_In.Value, Stop_Sig_In.Value,
-  Full_Stroke_Sig_In.Value, Datalogging_Info]);)
-//Then, read data from each child controller
-.then(Data.exchange.readData(Info_Buffers);)
-//Then, process the data obtained from the children
-//storing any datalogging info
-.then(Data.exchange.processData(Info_Buffers, Child_Statuses);)
-//Set this flag false once complete so it can begin again on next interrupt
-.then(() => {Reading_And_Logging_Active = false;})
-//Then update system variables and write outputs
-.then(() => {
-
-  //Checks if all modules are at setpoint. If so, Parent needs
-  //to send out Extend Press signal
-  Extend_Press = Child_Statuses.every((elem, ind, arr){
-    return elem.Heater_At_Setpoint;
-  });
-
-  //Checks if all modules are at release. If so, Parent needs
-  //to send out Cooling Air signal
-  Cooling_Air_On = Child_Statuses.every((elem, ind, arr){
-    return elem.Heater_At_Release;
-  });
-
-  //Checks if all Modules are at Cycle Complete. If so,
-  //Parent needs to send out Cycle Complete Signal
-  Cycle_Complete = Child_Statuses.every((elem, ind, arr){
-    return elem.Heater_Cycle_Complete;
-  });
-  if (Cycle_Complete && !Log_Request_Sent) Datalogging_Info = true;
-  else if (!Cycle_Complete && Log_Request_Sent) Log_Request_Sent = false;
-
-  //Checks to see if any modules are faulted. If so, Parent
-  //needs to send out LMP Faulted signal
-  LMP_Flted = Child_Statuses.some((elem, ind, arr){
-    return elem.Heater_Faulted;
-  });
-
-  Extend_Press_Pin.write(Extend_Press);
-  Cooling_Air_Pin.write(Cooling_Air_On);
-  Cycle_Complete_Pin.write(Cycle_Complete);
-  LMP_Flted_Pin.write(LMP_Flted);
-});
-
-I2C_Tmr.setInterval(() => {
-  if (!Reading_And_Logging_Active && System_Initialized) {
-    Reading_And_Logging_Active = true;
-    I2C_Promise;
+i2cTmr.setInterval(() => {
+  if (!readingAndLoggingActive && systemInitialized) {
+    readingAndLoggingActive = true;
+    i2cPromise();
   }
 }, '', '50m');
-//Ends Temp Info Interrupt setup
+// Ends Temp Info Interrupt setup
 
 module.exports = {
-  Temp_Info,
-  Datalogging_Info
-
+  tempInfo,
+  dataloggingInfo,
+  i2c1,
+  db,
+  heatersMapped,
+  logRequestSent,
+  infoBuffers,
+  childStatuses,
 };
