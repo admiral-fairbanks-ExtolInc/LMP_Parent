@@ -6,3 +6,8 @@ bower_components
 
 # MacOS
 .DS_Store
+
+# Project
+tmp
+logs
+
