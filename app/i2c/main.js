@@ -1,5 +1,9 @@
-const Data = require('./data/gather-data');
-const { Gpio } = require('onoff');
+'use strict';
+
+const Promise = require('bluebird');
+const express = require('express');
+const Data = require('./gather-data');
+const Gpio = require('onoff').Gpio;
 const NanoTimer = require('nanotimer');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
 const i2c = Promise.promisifyAll(require('i2c-bus'));
@@ -70,20 +74,23 @@ let heatersMapped;
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 const i2cPromise = Promise.resolve()
   // Broadcast out Status
-  .then(Data.broadcastData([startSigIn.Value, stopSigIn.Value,
-    fullStrokeSigIn.Value, dataloggingInfo]))
+  .then(() => {
+    Data.broadcastData([startSigIn.Value, stopSigIn.Value,
+    fullStrokeSigIn.Value, dataloggingInfo])
+  })
   // Then, read data from each child controller
-  .then(Data.readData(infoBuffers))
+  .then(() => {
+    Data.readData(infoBuffers)
+  })
   // Then, process the data obtained from the children
   // storing any datalogging info
-  .then(Data.processData(infoBuffers))
+  .then(() => {
+    Data.processData(infoBuffers)
+  })
   // Set this flag false once complete so it can begin again on next interrupt
   .then(() => { readingAndLoggingActive = false; })
   // Then update system variables and write outputs
   .then(() => {
-    // Stores Temp info in Pond JS timeseries format
-
-
     // Checks if all modules are at setpoint. If so, Parent needs
     // to send out Extend Press signal
     extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
@@ -106,6 +113,7 @@ const i2cPromise = Promise.resolve()
     lmpFltedPin.write(lmpFltedOut.Value);
   });
 
+
 // Setup Loop
 Promise.resolve()
   .then(() => {
@@ -121,9 +129,14 @@ Promise.resolve()
       db = database;
       dbCreated = true;
     }))
-  .then(Data.populateDatabase())
   .then(() => {
-    if (heatersMapped && i2cReady) systemInitialized = true;
+    Data.populateDatabase()
+  })
+  .then(() => {
+    if (heatersMapped && i2cReady) {
+      systemInitialized = true;
+      console.log('System Initialized');
+    }
     else console.log('System did not setup correctly');
   });
 

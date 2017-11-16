@@ -1,8 +1,15 @@
 'use strict';
 
+const Promise = require('bluebird');
 const async = require('async');
 const moment = require('moment');
-const main = require('../main');
+const main = require('./main');
+
+let childAddresses = [];
+let targetHeater;
+let statusBroadcasted;
+let statusProcessed;
+let readingFinished;
 const heaterTypes = new Array(childAddresses.length);
 const individualData = {
   timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
@@ -33,25 +40,24 @@ const individualData = {
   },
 };
 
-let childAddresses;
-let targetHeater;
-let statusBroadcasted;
-let statusProcessed;
-let readingFinished;
+
 
 // Broadcasts data to all children
-const broadcastData = (statusMessageBuffer) => {
+exports.broadcastData = function(statusMessageBuffer) {
   main.i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer)
-    .then((err, bytesWritten) => {
-      if (err) throw (err);
-      else if (bytesWritten !== statusMessageBuffer.byteLength) {
+    .then((bytesWritten) => {
+      if (bytesWritten !== statusMessageBuffer.byteLength) {
         // throw ('Bytes written does not match expected amount.');
       }
       if (main.dataloggingInfo) main.logRequestSent = true;
+    })
+    .catch((err) => {
+      if (err) throw (err);
     });
 };
+
 // Reads data obtained from all children
-const readData = () => {
+exports.readData = function() {
   let readLength;
   let targetChild;
   if (main.tempInfo === false && main.dataloggingInfo === false) readLength = 1;
@@ -71,8 +77,9 @@ const readData = () => {
     })
     .then(readData());
 };
+
 // Processes data from all children. Includes datalogging to Mongodb
-const processData = (data) => {
+exports.processData = function(data) {
   let datalogIndex;
   const overallStatus = new Array(data.length);
   const heaterStatus = {
@@ -84,7 +91,6 @@ const processData = (data) => {
     heaterFaulted: false,
     cycleDatalogged: false,
   };
-
   if (!statusProcessed) {
     for (let i = 0, l = data.length; i < l; i += 1) {
       const statusByte = data[i].readInt8(0);
@@ -102,9 +108,8 @@ const processData = (data) => {
     statusProcessed = true;
     main.childStatuses = overallStatus;
   }
-
   if (main.dataloggingInfo === true) {
-    const k = 30 * targetHeater;
+  const k = 30 * targetHeater;
     individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
     individualData.startData.startTime = data[datalogIndex]
       .readInt16BE(9 + k) / 100;
@@ -144,12 +149,11 @@ const processData = (data) => {
       },
       {
         $push: { dataLog: individualData },
-      },
+      }
     )
       .then((err) => {
         if (err) throw (err);
         if (err) throw (err);
-
         targetHeater += 1;
         if (targetHeater >= 4) {
           targetHeater = 0;
@@ -165,10 +169,8 @@ const processData = (data) => {
   }
 };
 
-
-// function Declarations
 // Creates datalog Template
-function templateGet(index, htrNum, htrType, address) {
+exports.templateGet = function(index, htrNum, htrType, address) {
   const heaterTemplate = {
     heaterId: {
       heaterNumber: (htrNum + index),
@@ -206,10 +208,10 @@ function templateGet(index, htrNum, htrType, address) {
     },
   };
   return heaterTemplate;
-}
+};
 
 // Populates Database with blank datalog
-function populateDatabase() {
+exports.populateDatabase = function() {
   main.i2c1.scan()
     .then((err, devices) => {
       if (err) throw (err);
@@ -236,24 +238,16 @@ function populateDatabase() {
       }
     })
     .then(() => { main.heatersMapped = true; });
-}
+};
 
 // Boilerplate callback
-function cb(err) {
+exports.cb = function(err) {
   if (err) throw (err);
-}
-
-// End Function Declarations
-
-exports.templateGet = templateGet;
-exports.populateDatabase = populateDatabase;
-exports.broadcastData = broadcastData;
-exports.readData = readData;
-exports.processData = processData;
-exports.cb = cb;
-module.exports = {
-  childAddresses,
-  statusBroadcasted,
-  readingFinished,
-  statusProcessed,
 };
+
+module.exports = {
+  childAddresses: childAddresses,
+  statusBroadcasted: statusBroadcasted,
+  readingFinished: readingFinished,
+  statusProcessed: statusProcessed
+}
