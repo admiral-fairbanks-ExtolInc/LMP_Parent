@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import dickbutt from './dickbutt.svg'
 import './App.css';
 import {LineChart} from 'react-easy-chart';
 import { escapeHTML } from './util';
@@ -36,6 +35,9 @@ class App extends Component {
     ];
 
     const initialWidth = window.innerWidth > 0 ? window.innerWidth : 500;
+    const divStyle = {
+      color: 'blue'
+    };
     this.state = {
       types: [
         {
@@ -178,17 +180,23 @@ class App extends Component {
 
   render() {
     return (
-      <div className="App">
+      <div className="App" fluid='true'>
         <Nav />
         <br />
           <h2>Input desired setpoint and press Submit</h2>
           <Container>
             <Row>
               <Col>
+              </Col>
+              <Col>
                 <SetpointInput type={this.state.types[0]} />
               </Col>
               <Col>
+              </Col>
+              <Col>
                 <SetpointInput type={this.state.types[1]} />
+              </Col>
+              <Col>
               </Col>
             </Row>
             <br />
@@ -210,7 +218,6 @@ class App extends Component {
                   xType={'time'}
                   width={this.state.componentWidth}
                   height={this.state.componentWidth / 2}
-                  interpolate={'cardinal'}
                   yDomainRange={[0, 1000]}
                   axisLabels={{ x: 'Hour', y: 'Percentage' }}
                   axes

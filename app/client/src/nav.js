@@ -1,7 +1,7 @@
 import React from 'react';
 import { Collapse, Navbar, NavbarToggler, NavbarBrand, Nav, NavItem, NavLink } from 'reactstrap';
 
-import dickbutt from './dickbutt.svg'
+import extolLogo from './extolLogo.jpg'
 
 export default class nav extends React.Component {
   constructor(props) {
@@ -21,7 +21,7 @@ export default class nav extends React.Component {
     return (
       <div>
         <Navbar color="info" light expand="md">
-          <NavbarBrand href="/"><img src={dickbutt} className="App-logo" alt="💩" /> LMP WEBSERVER III: 3 EDGY 5 ME</NavbarBrand>
+          <NavbarBrand href="/"><img src={extolLogo} className="App-logo" alt="" /> LMP WEBSERVER III: 3 EDGY 5 ME</NavbarBrand>
           <NavbarToggler onClick={this.toggle} />
           <Collapse isOpen={this.state.isOpen} navbar>
             <Nav className="ml-auto" navbar>

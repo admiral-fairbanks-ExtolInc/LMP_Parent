@@ -1,12 +1,13 @@
 'use strict';
 
+const util = require('util');
 const Promise = require('bluebird');
 const express = require('express');
 const Data = require('./gather-data');
 const Gpio = require('onoff').Gpio;
 const NanoTimer = require('nanotimer');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
-const i2c = Promise.promisifyAll(require('i2c-bus'));
+const I2C = require('raspi-i2c').I2C;
 
 const digIn = [5, 6, 13];
 const digOut = [16, 19, 20, 26];
@@ -56,17 +57,17 @@ const extendPressPin = new Gpio(16, 'out');
 const coolingAirPin = new Gpio(19, 'out');
 const cycleCompletePin = new Gpio(20, 'out');
 const lmpFltedPin = new Gpio(26, 'out');
+
+const i2c = new I2C();
 // End IO Config
 const infoBuffers = new Array([Data.childAddresses.length]);
 
 let tempInfo;
 let dataloggingInfo;
-let i2cReady;
 let db;
 let dbCreated;
 let systemInitialized;
 let readingAndLoggingActive;
-let i2c1;
 let childStatuses;
 let logRequestSent;
 let heatersMapped;
@@ -116,13 +117,6 @@ const i2cPromise = Promise.resolve()
 
 // Setup Loop
 Promise.resolve()
-  .then(() => {
-    i2c1 = i2c.open(1)
-      .then((err) => { // Opens I2C Channel
-        if (err) throw (err);
-        else i2cReady = true;
-      });
-  })
   .then(MongoClient.connect(url)
     .then((err, database) => {
       if (err) throw (err);
@@ -133,7 +127,7 @@ Promise.resolve()
     Data.populateDatabase()
   })
   .then(() => {
-    if (heatersMapped && i2cReady) {
+    if (heatersMapped && i2c) {
       systemInitialized = true;
       console.log('System Initialized');
     }
@@ -166,7 +160,7 @@ i2cTmr.setInterval(() => {
 module.exports = {
   tempInfo,
   dataloggingInfo,
-  i2c1,
+  i2c,
   db,
   heatersMapped,
   logRequestSent,

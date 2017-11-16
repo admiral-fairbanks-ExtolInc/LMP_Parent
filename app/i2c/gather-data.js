@@ -1,11 +1,16 @@
 'use strict';
 
+const util = require('util');
 const Promise = require('bluebird');
 const async = require('async');
 const moment = require('moment');
 const main = require('./main');
 
-let childAddresses = [];
+const i2cRead = util.promisify(main.i2c.read);
+const i2cWrite = util.promisify(main.i2c.write);
+const i2cWriteByte = util.promisify(main.i2c.writeByte);
+
+let childAddresses = [5];
 let targetHeater;
 let statusBroadcasted;
 let statusProcessed;
@@ -40,11 +45,9 @@ const individualData = {
   },
 };
 
-
-
 // Broadcasts data to all children
 exports.broadcastData = function(statusMessageBuffer) {
-  main.i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer)
+  i2cWrite(0, statusMessageBuffer)
     .then((bytesWritten) => {
       if (bytesWritten !== statusMessageBuffer.byteLength) {
         // throw ('Bytes written does not match expected amount.');
@@ -63,7 +66,7 @@ exports.readData = function() {
   if (main.tempInfo === false && main.dataloggingInfo === false) readLength = 1;
   else if (main.tempInfo === true && main.dataloggingInfo === false) readLength = 9;
   else if (main.dataloggingInfo === true) readLength = 129;
-  main.i2c1.i2cRead(targetChild, readLength, main.infoBuffers)
+  i2cRead(targetChild, readLength)
     .then((err, bytesRead, recievedMessage) => {
       if (err) throw (err);
       else if (bytesRead !== readLength) {
@@ -212,17 +215,19 @@ exports.templateGet = function(index, htrNum, htrType, address) {
 
 // Populates Database with blank datalog
 exports.populateDatabase = function() {
-  main.i2c1.scan()
+  Promise.resolve()//main.i2c1.scan() <-- will need to be re-incorporated
+  /*
     .then((err, devices) => {
       if (err) throw (err);
       childAddresses = devices;
     })
-    .then(main.i2c1.sendByte(0, 1)
+  */
+    .then(i2cWriteByte(0, let scanByte = 1)
       .then((err) => {
         if (err) throw (err);
       }))
     .then(async.eachOfSeries(childAddresses, (item, key) => {
-      main.i2c1.read(item, 4)
+      i2cRead(item, 4)
         .then((err, bytesRead, recievedMessage) => {
           heaterTypes[key] = recievedMessage;
         });

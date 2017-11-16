@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import dickbutt from './dickbutt.svg'
 import './App.css';
 import {LineChart} from 'react-easy-chart';
 import { escapeHTML } from './util';

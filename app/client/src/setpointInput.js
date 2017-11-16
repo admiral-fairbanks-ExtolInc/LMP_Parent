@@ -1,5 +1,5 @@
 import React from 'react';
-import { InputGroup, InputGroupButton, Input, Button } from 'reactstrap';
+import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
 const Axios = require('axios');
 
 export default class setpointInput extends React.Component {
@@ -47,9 +47,10 @@ export default class setpointInput extends React.Component {
     return (
       <div>
         <h4>{title}</h4>
-        <InputGroup>
+        <InputGroup size='100'>
           <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
           <Input placeholder={boilerplate} onChange={this.updateValue} type='number' step='10' />
+          <InputGroupAddon>℉</InputGroupAddon>
         </InputGroup>
       </div>
     );
