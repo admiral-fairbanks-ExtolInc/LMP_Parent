@@ -6,6 +6,8 @@ const async = require('async');
 const moment = require('moment');
 const main = require('./main');
 const i2c = require('./my-i2c-bus');
+const chai = require('chai');
+const expect = chai.expect;
 
 let childAddresses = [5];
 let targetHeater;
@@ -14,6 +16,8 @@ let statusProcessed;
 let readingFinished;
 let systemInitialized;
 
+const replyDatalog = 33;
+const replyNoDatalog = 3;
 const heaterTypes = new Array(childAddresses.length);
 const individualData = {
   timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
@@ -46,7 +50,6 @@ const individualData = {
 
 // Setup Promise Function
 exports.setupLoop = () => {
-  let i2cReady;
   // Setup Loop
   Promise.resolve()
     .then(MongoClient.connect(url)
@@ -69,17 +72,15 @@ exports.setupLoop = () => {
 
 
 // Broadcasts data to all children
-exports.broadcastData = statusMessageBuffer) => {
-  i2cWrite(0, statusMessageBuffer)
-    .then((bytesWritten) => {
-      if (bytesWritten !== statusMessageBuffer.byteLength) {
-        // throw ('Bytes written does not match expected amount.');
-      }
+exports.broadcastData = (statusMessageBuffer) => {
+  i2c.openP(1).then((bus) => {
+    return bus.i2cWriteP(0, statusMessageBuffer.byteLength, statusMessageBuffer)
+    .then(({bus. bytesWritten, buffer}) => {
+      expect(bytesWritten).toequal(buffer.length);
       if (main.dataloggingInfo) main.logRequestSent = true;
-    })
-    .catch((err) => {
-      if (err) throw (err);
+      return bus.closeP();
     });
+  });
 };
 
 // Reads data obtained from all children
@@ -87,21 +88,20 @@ exports.readData = () => {
   let readLength;
   let targetChild;
   if (main.tempInfo === false && main.dataloggingInfo === false) readLength = 1;
-  else if (main.tempInfo === true && main.dataloggingInfo === false) readLength = 9;
-  else if (main.dataloggingInfo === true) readLength = 129;
-  i2cRead(targetChild, readLength)
-    .then((err, bytesRead, recievedMessage) => {
-      if (err) throw (err);
-      else if (bytesRead !== readLength) {
-        // throw ('Bytes written does not match expected amount.');
-      }
-      main.infoBuffers[targetChild] = recievedMessage;
-      targetChild += 1;
-      if (targetChild >= main.infoBuffers.length) {
-        return;
-      }
-    })
-    .then(readData());
+  else if (main.tempInfo === true &&
+    main.dataloggingInfo === false) readLength = 3; //update to be based on board heater number
+  else if (main.dataloggingInfo === true) readLength = 33; // same
+  i2c.openP(1).then((bus) => {
+    return bus.i2cReadP(targetChild, readLength)
+  }).then(({bus, bytesRead, buffer}) => {
+    expect(buffer.toString()).to.equal(replyDatalog || replyNoDatalog);
+    return bus.closeP();
+    main.infoBuffers[targetChild] = recievedMessage;
+    targetChild += 1;
+    if (targetChild >= main.infoBuffers.length) {
+      return;
+    }
+  }).then(readData());
 };
 
 // Processes data from all children. Includes datalogging to Mongodb
@@ -238,33 +238,35 @@ exports.templateGet = (index, htrNum, htrType, address) => {
 
 // Populates Database with blank datalog
 exports.populateDatabase = () => {
-  i2c.openP(1)
-    .then((bus) => {
-      return bus.scanP();
-    }).then(({bus, devices}) => {
-      childAddresses = devices;
-      return bus;
-    }).then(i2cWriteByte(0, 1)
-      .then((err) => {
-        if (err) throw (err);
-      }))
-    .then(async.eachOfSeries(childAddresses, (item, key) => {
-      i2cRead(item, 4)
-        .then((err, bytesRead, recievedMessage) => {
-          heaterTypes[key] = recievedMessage;
-        });
-    }))
-    .then(() => {
-      for (let ind = 0, l = childAddresses.length; ind < l; ind += 1) {
-        main.db.collection('Heater_Database').insertMany([
-          templateGet(ind, 1, heaterTypes[ind][0], childAddresses[ind]),
-          templateGet(ind, 2, heaterTypes[ind][1], childAddresses[ind]),
-          templateGet(ind, 3, heaterTypes[ind][2], childAddresses[ind]),
-          templateGet(ind, 4, heaterTypes[ind][3], childAddresses[ind]),
-        ]);
+  i2c.openP(1).then((bus) => {
+    return bus.scanP();
+  }).then(({bus, devices}) => {
+    childAddresses = devices;
+  }).then((bus) => {
+    buffer = 1;
+    bus.i2cWriteP(0, buffer.byteLength, buffer)
+      .then(({bus, bytesWritten, buffer}) => {
+        expect(bytesWritten).to.equal(buffer.length);
       }
-    })
-    .then(() => { main.heatersMapped = true; });
+  }).then((bus) => {
+    async.eachOfSeries(childAddresses, (item, key) => {
+      bus.i2cReadP(item, 4, recievedMesage)
+      .then((err, bytesRead, recievedMessage) => {
+        heaterTypes[key] = recievedMessage;
+      });
+    });
+  }).then((bus) => {
+    return bus.closeP();
+  }).then(() => {
+    for (let ind = 0, l = childAddresses.length; ind < l; ind += 1) {
+      main.db.collection('Heater_Database').insertMany([
+        templateGet(ind, 1, heaterTypes[ind][0], childAddresses[ind]),
+        templateGet(ind, 2, heaterTypes[ind][1], childAddresses[ind]),
+        templateGet(ind, 3, heaterTypes[ind][2], childAddresses[ind]),
+        templateGet(ind, 4, heaterTypes[ind][3], childAddresses[ind]),
+      ]);
+    }
+  }).then(() => { main.heatersMapped = true; });
 };
 
 // Boilerplate callback
