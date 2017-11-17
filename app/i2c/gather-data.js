@@ -5,16 +5,15 @@ const Promise = require('bluebird');
 const async = require('async');
 const moment = require('moment');
 const main = require('./main');
-
-const i2cRead = util.promisify(main.i2c.read);
-const i2cWrite = util.promisify(main.i2c.write);
-const i2cWriteByte = util.promisify(main.i2c.writeByte);
+const i2c = require('./my-i2c-bus');
 
 let childAddresses = [5];
 let targetHeater;
 let statusBroadcasted;
 let statusProcessed;
 let readingFinished;
+let systemInitialized;
+
 const heaterTypes = new Array(childAddresses.length);
 const individualData = {
   timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
@@ -45,8 +44,32 @@ const individualData = {
   },
 };
 
+// Setup Promise Function
+exports.setupLoop = () => {
+  let i2cReady;
+  // Setup Loop
+  Promise.resolve()
+    .then(MongoClient.connect(url)
+      .then((err, database) => {
+        if (err) throw (err);
+        db = database;
+        dbCreated = true;
+      }))
+    .then(() => {
+      Data.populateDatabase()
+    })
+    .then(() => {
+      if (heatersMapped) {
+        systemInitialized = true;
+        console.log('System Initialized');
+      }
+      else console.log('System did not setup correctly');
+    });
+}
+
+
 // Broadcasts data to all children
-exports.broadcastData = function(statusMessageBuffer) {
+exports.broadcastData = statusMessageBuffer) => {
   i2cWrite(0, statusMessageBuffer)
     .then((bytesWritten) => {
       if (bytesWritten !== statusMessageBuffer.byteLength) {
@@ -60,7 +83,7 @@ exports.broadcastData = function(statusMessageBuffer) {
 };
 
 // Reads data obtained from all children
-exports.readData = function() {
+exports.readData = () => {
   let readLength;
   let targetChild;
   if (main.tempInfo === false && main.dataloggingInfo === false) readLength = 1;
@@ -82,7 +105,7 @@ exports.readData = function() {
 };
 
 // Processes data from all children. Includes datalogging to Mongodb
-exports.processData = function(data) {
+exports.processData = (data) => {
   let datalogIndex;
   const overallStatus = new Array(data.length);
   const heaterStatus = {
@@ -173,7 +196,7 @@ exports.processData = function(data) {
 };
 
 // Creates datalog Template
-exports.templateGet = function(index, htrNum, htrType, address) {
+exports.templateGet = (index, htrNum, htrType, address) => {
   const heaterTemplate = {
     heaterId: {
       heaterNumber: (htrNum + index),
@@ -214,15 +237,14 @@ exports.templateGet = function(index, htrNum, htrType, address) {
 };
 
 // Populates Database with blank datalog
-exports.populateDatabase = function() {
-  Promise.resolve()//main.i2c1.scan() <-- will need to be re-incorporated
-  /*
-    .then((err, devices) => {
-      if (err) throw (err);
+exports.populateDatabase = () => {
+  i2c.openP(1)
+    .then((bus) => {
+      return bus.scanP();
+    }).then(({bus, devices}) => {
       childAddresses = devices;
-    })
-  */
-    .then(i2cWriteByte(0, let scanByte = 1)
+      return bus;
+    }).then(i2cWriteByte(0, 1)
       .then((err) => {
         if (err) throw (err);
       }))
@@ -246,7 +268,7 @@ exports.populateDatabase = function() {
 };
 
 // Boilerplate callback
-exports.cb = function(err) {
+exports.cb = (err) => {
   if (err) throw (err);
 };
 
@@ -254,5 +276,6 @@ module.exports = {
   childAddresses: childAddresses,
   statusBroadcasted: statusBroadcasted,
   readingFinished: readingFinished,
-  statusProcessed: statusProcessed
+  statusProcessed: statusProcessed,
+  systemInitialized: systemInitialized
 }

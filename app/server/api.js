@@ -1,3 +1,5 @@
+'use strict';
+
 const express = require('express');
 const moment = require('moment');
 const bodyParser = require('body-parser')

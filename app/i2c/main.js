@@ -7,7 +7,6 @@ const Data = require('./gather-data');
 const Gpio = require('onoff').Gpio;
 const NanoTimer = require('nanotimer');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
-const I2C = require('raspi-i2c').I2C;
 
 const digIn = [5, 6, 13];
 const digOut = [16, 19, 20, 26];
@@ -58,7 +57,6 @@ const coolingAirPin = new Gpio(19, 'out');
 const cycleCompletePin = new Gpio(20, 'out');
 const lmpFltedPin = new Gpio(26, 'out');
 
-const i2c = new I2C();
 // End IO Config
 const infoBuffers = new Array([Data.childAddresses.length]);
 
@@ -66,7 +64,7 @@ let tempInfo;
 let dataloggingInfo;
 let db;
 let dbCreated;
-let systemInitialized;
+let Data.systemInitialized;
 let readingAndLoggingActive;
 let childStatuses;
 let logRequestSent;
@@ -114,26 +112,6 @@ const i2cPromise = Promise.resolve()
     lmpFltedPin.write(lmpFltedOut.Value);
   });
 
-
-// Setup Loop
-Promise.resolve()
-  .then(MongoClient.connect(url)
-    .then((err, database) => {
-      if (err) throw (err);
-      db = database;
-      dbCreated = true;
-    }))
-  .then(() => {
-    Data.populateDatabase()
-  })
-  .then(() => {
-    if (heatersMapped && i2c) {
-      systemInitialized = true;
-      console.log('System Initialized');
-    }
-    else console.log('System did not setup correctly');
-  });
-
 // Watch Input Pins, Update value accordingly
 startSigPin.watch((err, value) => {
   if (err) throw err;
@@ -150,7 +128,7 @@ fullStrokePin.watch((err, value) => {
 // End Watch Input Pins
 
 i2cTmr.setInterval(() => {
-  if (!readingAndLoggingActive && systemInitialized) {
+  if (!readingAndLoggingActive && Data.systemInitialized) {
     readingAndLoggingActive = true;
     i2cPromise();
   }
@@ -160,7 +138,6 @@ i2cTmr.setInterval(() => {
 module.exports = {
   tempInfo,
   dataloggingInfo,
-  i2c,
   db,
   heatersMapped,
   logRequestSent,

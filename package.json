@@ -31,7 +31,6 @@
     "flot": "^0.8.0-alpha",
     "font-awesome": "^4.7.0",
     "graceful-fs": "^4.1.11",
-    "i2c-bus": "^1.2.4",
     "install": "^0.10.1",
     "jquery": "^3.2.1",
     "minimatch": "^3.0.4",

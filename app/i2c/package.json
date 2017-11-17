@@ -24,7 +24,8 @@
     "moment": "^2.19.1",
     "mongodb": "^2.2.33",
     "nanotimer": "^0.3.15",
-    "onoff": "^1.1.8"
+    "onoff": "^1.1.8",
+    "raspi-i2c": "^6.1.0"
   },
   "devDependencies": {}
 }
