@@ -64,7 +64,7 @@ let tempInfo;
 let dataloggingInfo;
 let db;
 let dbCreated;
-let Data.systemInitialized;
+let systemInitialized;
 let readingAndLoggingActive;
 let childStatuses;
 let logRequestSent;

@@ -75,7 +75,7 @@ exports.setupLoop = () => {
 exports.broadcastData = (statusMessageBuffer) => {
   i2c.openP(1).then((bus) => {
     return bus.i2cWriteP(0, statusMessageBuffer.byteLength, statusMessageBuffer)
-    .then(({bus. bytesWritten, buffer}) => {
+    .then(({bus, bytesWritten, buffer}) => {
       expect(bytesWritten).toequal(buffer.length);
       if (main.dataloggingInfo) main.logRequestSent = true;
       return bus.closeP();
@@ -247,7 +247,7 @@ exports.populateDatabase = () => {
     bus.i2cWriteP(0, buffer.byteLength, buffer)
       .then(({bus, bytesWritten, buffer}) => {
         expect(bytesWritten).to.equal(buffer.length);
-      }
+      })
   }).then((bus) => {
     async.eachOfSeries(childAddresses, (item, key) => {
       bus.i2cReadP(item, 4, recievedMesage)
