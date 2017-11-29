@@ -1,9 +1,8 @@
 'use strict';
-
+const Data = require('./gather-data');
 const util = require('util');
 const Promise = require('bluebird');
 const express = require('express');
-const Data = require('./gather-data');
 const Gpio = require('onoff').Gpio;
 const NanoTimer = require('nanotimer');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
@@ -66,7 +65,7 @@ let db;
 let dbCreated;
 let systemInitialized;
 let readingAndLoggingActive;
-let childStatuses;
+let childStatuses = [];
 let logRequestSent;
 let heatersMapped;
 
@@ -74,17 +73,16 @@ let heatersMapped;
 const i2cPromise = Promise.resolve()
   // Broadcast out Status
   .then(() => {
-    Data.broadcastData([startSigIn.Value, stopSigIn.Value,
-    fullStrokeSigIn.Value, dataloggingInfo])
+    Data.broadcastData;
   })
   // Then, read data from each child controller
   .then(() => {
-    Data.readData(infoBuffers)
+    Data.readData;
   })
   // Then, process the data obtained from the children
   // storing any datalogging info
   .then(() => {
-    Data.processData(infoBuffers)
+    Data.processData;
   })
   // Set this flag false once complete so it can begin again on next interrupt
   .then(() => { readingAndLoggingActive = false; })
@@ -132,15 +130,21 @@ i2cTmr.setInterval(() => {
     readingAndLoggingActive = true;
     i2cPromise();
   }
-}, '', '50m');
+  else if (!Data.systemInitialized) {
+    // console.log('entering setup')
+    Data.setupLoop();
+  }
+}, '', '750m');
 // Ends Temp Info Interrupt setup
 
 module.exports = {
-  tempInfo,
   dataloggingInfo,
   db,
   heatersMapped,
   logRequestSent,
   infoBuffers,
   childStatuses,
+  startSigIn,
+  stopSigIn,
+  fullStrokeSigIn,
 };

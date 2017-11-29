@@ -49,17 +49,19 @@ const individualData = {
 };
 
 // Setup Promise Function
-exports.setupLoop = () => {
+function setupLoop() {
+  console.log('entering setup')
   // Setup Loop
   Promise.resolve()
     .then(MongoClient.connect(url)
       .then((err, database) => {
+	console.log('database started')
         if (err) throw (err);
         db = database;
         dbCreated = true;
       }))
     .then(() => {
-      Data.populateDatabase()
+      populateDatabase()
     })
     .then(() => {
       if (heatersMapped) {
@@ -70,9 +72,10 @@ exports.setupLoop = () => {
     });
 }
 
-
 // Broadcasts data to all children
-exports.broadcastData = (statusMessageBuffer) => {
+function broadcastData() {
+  statusMessageBuffer = [main.startSigIn.Value, main.stopSigIn.Value,
+    main.fullStrokeSigIn.Value, main.dataloggingInfo];
   i2c.openP(1).then((bus) => {
     return bus.i2cWriteP(0, statusMessageBuffer.byteLength, statusMessageBuffer)
     .then(({bus, bytesWritten, buffer}) => {
@@ -84,28 +87,32 @@ exports.broadcastData = (statusMessageBuffer) => {
 };
 
 // Reads data obtained from all children
-exports.readData = () => {
+function readData() {
+  let data = main.infoBuffers;
   let readLength;
   let targetChild;
-  if (main.tempInfo === false && main.dataloggingInfo === false) readLength = 1;
-  else if (main.tempInfo === true &&
-    main.dataloggingInfo === false) readLength = 3; //update to be based on board heater number
-  else if (main.dataloggingInfo === true) readLength = 33; // same
+  if (!main.tempInfo && !main.dataloggingInfo) readLength = 1;
+  else if (main.tempInfo && !main.dataloggingInfo) {
+    readLength = 3; //update to be based on board heater number
+  }
+  else if (main.dataloggingInfo) readLength = 33; // same
   i2c.openP(1).then((bus) => {
     return bus.i2cReadP(targetChild, readLength)
   }).then(({bus, bytesRead, buffer}) => {
     expect(buffer.toString()).to.equal(replyDatalog || replyNoDatalog);
     return bus.closeP();
-    main.infoBuffers[targetChild] = recievedMessage;
+    data[targetChild] = recievedMessage;
     targetChild += 1;
-    if (targetChild >= main.infoBuffers.length) {
+    if (targetChild >= data.length) {
+      main.infoBuffers = data;
       return;
     }
   }).then(readData());
 };
 
 // Processes data from all children. Includes datalogging to Mongodb
-exports.processData = (data) => {
+function processData() {
+  let data = main.infoBuffers;
   let datalogIndex;
   const overallStatus = new Array(data.length);
   const heaterStatus = {
@@ -134,7 +141,7 @@ exports.processData = (data) => {
     statusProcessed = true;
     main.childStatuses = overallStatus;
   }
-  if (main.dataloggingInfo === true) {
+  if (main.dataloggingInfo) {
   const k = 30 * targetHeater;
     individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
     individualData.startData.startTime = data[datalogIndex]
@@ -196,7 +203,7 @@ exports.processData = (data) => {
 };
 
 // Creates datalog Template
-exports.templateGet = (index, htrNum, htrType, address) => {
+function templateGet(index, htrNum, htrType, address) {
   const heaterTemplate = {
     heaterId: {
       heaterNumber: (htrNum + index),
@@ -237,7 +244,7 @@ exports.templateGet = (index, htrNum, htrType, address) => {
 };
 
 // Populates Database with blank datalog
-exports.populateDatabase = () => {
+function populateDatabase() {
   i2c.openP(1).then((bus) => {
     return bus.scanP();
   }).then(({bus, devices}) => {
@@ -270,9 +277,16 @@ exports.populateDatabase = () => {
 };
 
 // Boilerplate callback
-exports.cb = (err) => {
+function cb(err) {
   if (err) throw (err);
 };
+
+module.exports = {
+  setupLoop: setupLoop,
+  broadcastData: broadcastData,
+  readData: readData,
+  processData: processData,
+}
 
 module.exports = {
   childAddresses: childAddresses,
