@@ -4,7 +4,7 @@ const util = require('util');
 const Promise = require('bluebird');
 const async = require('async');
 const moment = require('moment');
-const main = require('./main');
+const main = require('./i2cRoutine');
 const i2c = require('./my-i2c-bus');
 const chai = require('chai');
 const expect = chai.expect;
@@ -51,17 +51,6 @@ const individualData = {
     cycleCompletePos: 0,
   },
 };
-
-// Setup Promise Function
-function setupLoop() {
-  console.log('1 entering setup')
-  // Setup Loop
-  MongoClient.connect(url, (err, database) => {
-    console.log('2 successfully connected to database');
-    db = database;
-    populateDatabase();
-  })
-}
 
 // Broadcasts data to all children
 function broadcastData() {
@@ -234,8 +223,20 @@ function templateGet(index, htrNum, htrType, address) {
   return heaterTemplate;
 };
 
+
+// Setup Promise Function
+function setupLoop() {
+  console.log('1 entering setup')
+  // Setup Loop
+  MongoClient.connect(url, (err, database) => {
+    console.log('2 successfully connected to database');
+    db = database;
+    populateDatabase(db);
+  })
+}
+
 // Populates Database with blank datalog
-function populateDatabase() {
+function populateDatabase(database) {
   const heaterTypes = new Array(childAddresses.length);
   i2c.openP(1).then((bus) => {
     return bus.scanP();
@@ -257,7 +258,7 @@ function populateDatabase() {
             bus.i2cReadP(item, 4, recievedMessage)
               .then((err, bytesRead, recievedMessage) => {
                 heaterTypes[key] = recievedMessage;
-      	        console.log('5 msg received: ' + heaterTypes[key]);
+      	        console.log('5 msg received: ' + heaterTypes);
               });
           });
           return bus;
@@ -265,7 +266,7 @@ function populateDatabase() {
           return bus.closeP().catch((err) => { throw (err) });
         }).then(() => {
           for (let ind = 0, l = childAddresses.length; ind < l; ind += 1) {
-            db.collection('Heater_Database').insertMany([
+            database.collection('Heater_Database').insertMany([
               templateGet(ind, 1, heaterTypes[ind][0], childAddresses[ind]),
               templateGet(ind, 2, heaterTypes[ind][1], childAddresses[ind]),
               templateGet(ind, 3, heaterTypes[ind][2], childAddresses[ind]),
