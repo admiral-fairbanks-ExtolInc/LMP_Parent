@@ -82,7 +82,7 @@ function readData() {
   let data = main.infoBuffers;
   let readLength;
   let targetChild;
-  if (!main.tempInfo & & !main.dataloggingInfo) readLength = 1;
+  if (!main.tempInfo && !main.dataloggingInfo) readLength = 1;
   else if (main.tempInfo && !main.dataloggingInfo) {
     readLength = 3; //update to be based on board heater number
   }
@@ -258,7 +258,7 @@ function populateDatabase() {
               .then((err, bytesRead, recievedMessage) => {
                 heaterTypes[key] = recievedMessage;
       	        console.log('5 msg received: ' + heaterTypes[key]);
-            });
+              });
           });
           return bus;
         }).then((bus) => { //i2cReadP done
@@ -279,9 +279,9 @@ function populateDatabase() {
             console.log('System Initialized');
           }
           else console.log('System did not setup correctly');
-        }).catch((err) => { throw (err) });
+        }).catch((err) => { throw (err) })
       })
-    })
+  })
 }
 
 // Boilerplate callback
