@@ -42,7 +42,7 @@ app.post('/server/updateSetpoint', (req, res) => {
 
 });
 
-app.post('/payload', (req, res) {
+app.post('/payload', (req, res) => {
   //verify that the payload is a push from the correct repo
   //verify repository.name == 'wackcoon-device' or repository.full_name = 'DanielEgan/wackcoon-device'
   console.log(req.body.pusher.name + ' just pushed to ' + req.body.repository.name);
@@ -63,10 +63,12 @@ app.post('/payload', (req, res) {
 
   // and run tsc
   exec('tsc', execCallback);
+
+  res.sendStatus(200);
+  res.end();
 });
 
-res.sendStatus(200);
-res.end();
+
 
 function execCallback(err, stdout, stderr) {
 	if(stdout) console.log(stdout);

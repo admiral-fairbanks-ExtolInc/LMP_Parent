@@ -82,23 +82,24 @@ function readData() {
   let data = main.infoBuffers;
   let readLength;
   let targetChild;
-  if (!main.tempInfo && !main.dataloggingInfo) readLength = 1;
+  if (!main.tempInfo & & !main.dataloggingInfo) readLength = 1;
   else if (main.tempInfo && !main.dataloggingInfo) {
     readLength = 3; //update to be based on board heater number
   }
   else if (main.dataloggingInfo) readLength = 33; // same
   i2c.openP(1).then((bus) => {
     return bus.i2cReadP(targetChild, readLength)
-  }).then(({bus, bytesRead, buffer}) => {
-    expect(buffer.toString()).to.equal(replyDatalog || replyNoDatalog);
-    return bus.closeP();
-    data[targetChild] = recievedMessage;
-    targetChild += 1;
-    if (targetChild >= data.length) {
-      main.infoBuffers = data;
-      return;
-    }
-  }).then(readData());
+      .then(({bus, bytesRead, buffer}) => {
+        expect(buffer.toString()).to.equal(replyDatalog || replyNoDatalog);
+        return bus.closeP();
+        data[targetChild] = recievedMessage;
+        targetChild += 1;
+        if (targetChild >= data.length) {
+          main.infoBuffers = data;
+          return;
+        }
+      }).then(readData());
+  })
 };
 
 // Processes data from all children. Includes datalogging to Mongodb
@@ -174,22 +175,21 @@ function processData() {
       {
         $push: { dataLog: individualData },
       }
-    )
-      .then((err) => {
-        if (err) throw (err);
-        if (err) throw (err);
-        targetHeater += 1;
-        if (targetHeater >= 4) {
-          targetHeater = 0;
-          datalogIndex += 1;
-        }
-        if (datalogIndex >= data.length) {
-          datalogIndex = 0;
-          statusProcessed = false;
-          return;
-        }
-      })
-      .then(processData(data, main.childStatuses));
+    ).then((err) => {
+      if (err) throw (err);
+      if (err) throw (err);
+      targetHeater += 1;
+      if (targetHeater >= 4) {
+        targetHeater = 0;
+        datalogIndex += 1;
+      }
+      if (datalogIndex >= data.length) {
+        datalogIndex = 0;
+        statusProcessed = false;
+        return;
+      }
+    }).then(processData(data, main.childStatuses))
+      .catch((err) => {throw (err);});
   }
 };
 
@@ -252,17 +252,16 @@ function populateDatabase() {
         return bus;
       }).then((bus) => {   // i2cWriteP finished
         let recievedMessage = Buffer.alloc(4);
-        Promise.resolve()
-        .then(() => {
+        Promise.resolve().then(() => {
           async.eachOfSeries(childAddresses, (item, key) => {
             bus.i2cReadP(item, 4, recievedMessage)
-            .then((err, bytesRead, recievedMessage) => {
-              heaterTypes[key] = recievedMessage;
-    	      console.log('5 msg received: ' + heaterTypes[key])
-            })
+              .then((err, bytesRead, recievedMessage) => {
+                heaterTypes[key] = recievedMessage;
+      	        console.log('5 msg received: ' + heaterTypes[key]);
+            });
           });
           return bus;
-        }).then((bus) => {
+        }).then((bus) => { //i2cReadP done
           return bus.closeP().catch((err) => { throw (err) });
         }).then(() => {
           for (let ind = 0, l = childAddresses.length; ind < l; ind += 1) {
@@ -274,15 +273,16 @@ function populateDatabase() {
             ]);
           }
         }).then(() => {
-          heatersMapped = true; 
+          heatersMapped = true;
           if (heatersMapped) {
             systemInitialized = true;
             console.log('System Initialized');
           }
           else console.log('System did not setup correctly');
-        })
-
-};
+        }).catch((err) => { throw (err) });
+      })
+    })
+}
 
 // Boilerplate callback
 function cb(err) {
@@ -300,4 +300,3 @@ module.exports = {
   statusProcessed: statusProcessed,
   systemInitialized: systemInitialized,
 };
-
