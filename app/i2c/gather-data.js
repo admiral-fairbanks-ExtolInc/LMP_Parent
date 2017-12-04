@@ -258,13 +258,13 @@ function populateDatabase(database) {
               .then((err, bytesRead, recievedMessage) => {
                 let heaterTypes = recievedMessage;
       	        console.log('5 msg received: ' + heaterTypes);
-                return heaterTypes
+                return {heaterTypes, key};
               }).then((heaterTypes) => {
                 database.collection('Heater_Database').insertMany([
-                  templateGet(ind, 1, heaterTypes[0], childAddresses[ind]),
-                  templateGet(ind, 2, heaterTypes[1], childAddresses[ind]),
-                  templateGet(ind, 3, heaterTypes[2], childAddresses[ind]),
-                  templateGet(ind, 4, heaterTypes[3], childAddresses[ind]),
+                  templateGet(key, 1, heaterTypes[0], childAddresses[key]),
+                  templateGet(key, 2, heaterTypes[1], childAddresses[key]),
+                  templateGet(key, 3, heaterTypes[2], childAddresses[key]),
+                  templateGet(key, 4, heaterTypes[3], childAddresses[key]),
                 ]);
               });
           });
