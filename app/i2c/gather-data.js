@@ -267,17 +267,17 @@ function populateDatabase(database) {
                   templateGet(key, 4, heaterTypes[3], childAddresses[key]),
                 ]);
               });
+          }, (bus) => {
+            console.log('closing i2c connection');
+            return bus.closeP().catch((err) => { throw (err) });
+            heatersMapped = true;
+            if (heatersMapped) {
+              systemInitialized = true;
+              console.log('System Initialized');
+            }
+            else console.log('System did not setup correctly');
           });
           return bus;
-        }).then((bus) => { //i2cReadP done
-          return bus.closeP().catch((err) => { throw (err) });
-        }).then(() => {
-          heatersMapped = true;
-          if (heatersMapped) {
-            systemInitialized = true;
-            console.log('System Initialized');
-          }
-          else console.log('System did not setup correctly');
         }).catch((err) => { throw (err) })
       })
   })
