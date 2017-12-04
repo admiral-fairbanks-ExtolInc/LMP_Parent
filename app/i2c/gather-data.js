@@ -237,7 +237,6 @@ function setupLoop() {
 
 // Populates Database with blank datalog
 function populateDatabase(database) {
-  const heaterTypes = new Array(childAddresses.length);
   i2c.openP(1).then((bus) => {
     return bus.scanP();
   }).then(({bus, devices}) => {
@@ -257,22 +256,21 @@ function populateDatabase(database) {
           async.eachOfSeries(childAddresses, (item, key) => {
             bus.i2cReadP(item, 4, recievedMessage)
               .then((err, bytesRead, recievedMessage) => {
-                heaterTypes[key] = recievedMessage;
+                let heaterTypes = recievedMessage;
       	        console.log('5 msg received: ' + heaterTypes);
+                return heaterTypes
+              }).then((heaterTypes) => {
+                database.collection('Heater_Database').insertMany([
+                  templateGet(ind, 1, heaterTypes[0], childAddresses[ind]),
+                  templateGet(ind, 2, heaterTypes[1], childAddresses[ind]),
+                  templateGet(ind, 3, heaterTypes[2], childAddresses[ind]),
+                  templateGet(ind, 4, heaterTypes[3], childAddresses[ind]),
+                ]);
               });
           });
           return bus;
         }).then((bus) => { //i2cReadP done
           return bus.closeP().catch((err) => { throw (err) });
-        }).then(() => {
-          for (let ind = 0, l = childAddresses.length; ind < l; ind += 1) {
-            database.collection('Heater_Database').insertMany([
-              templateGet(ind, 1, heaterTypes[ind][0], childAddresses[ind]),
-              templateGet(ind, 2, heaterTypes[ind][1], childAddresses[ind]),
-              templateGet(ind, 3, heaterTypes[ind][2], childAddresses[ind]),
-              templateGet(ind, 4, heaterTypes[ind][3], childAddresses[ind]),
-            ]);
-          }
         }).then(() => {
           heatersMapped = true;
           if (heatersMapped) {
