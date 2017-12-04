@@ -2,7 +2,6 @@
   "name": "LMP_Parent",
   "version": "0.4.0",
   "description": "Main LMP Parent code",
-  "main": "main.js",
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node ./app/server/api.js",

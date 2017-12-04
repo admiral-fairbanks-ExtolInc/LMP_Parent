@@ -2,7 +2,7 @@
   "name": "lmp-v0.3",
   "version": "0.3.0",
   "description": "Background App for Data Gathering",
-  "main": "main.js",
+  "main": "./app/i2c/main.js",
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node ../api/api.js",

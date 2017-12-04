@@ -8,6 +8,8 @@ const main = require('./main');
 const i2c = require('./my-i2c-bus');
 const chai = require('chai');
 const expect = chai.expect;
+const MongoClient = require('mongodb').MongoClient;
+const Server = require('mongodb').Server;
 
 let childAddresses = [5];
 let targetHeater;
@@ -15,10 +17,12 @@ let statusBroadcasted;
 let statusProcessed;
 let readingFinished;
 let systemInitialized;
+let heatersMapped;
+let db;
 
+const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
 const replyNoDatalog = 3;
-const heaterTypes = new Array(childAddresses.length);
 const individualData = {
   timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
   startData: {
@@ -50,26 +54,13 @@ const individualData = {
 
 // Setup Promise Function
 function setupLoop() {
-  console.log('entering setup')
+  console.log('1 entering setup')
   // Setup Loop
-  Promise.resolve()
-    .then(MongoClient.connect(url)
-      .then((err, database) => {
-	console.log('database started')
-        if (err) throw (err);
-        db = database;
-        dbCreated = true;
-      }))
-    .then(() => {
-      populateDatabase()
-    })
-    .then(() => {
-      if (heatersMapped) {
-        systemInitialized = true;
-        console.log('System Initialized');
-      }
-      else console.log('System did not setup correctly');
-    });
+  MongoClient.connect(url, (err, database) => {
+    console.log('2 successfully connected to database');
+    db = database;
+    populateDatabase();
+  })
 }
 
 // Broadcasts data to all children
@@ -245,35 +236,52 @@ function templateGet(index, htrNum, htrType, address) {
 
 // Populates Database with blank datalog
 function populateDatabase() {
+  const heaterTypes = new Array(childAddresses.length);
   i2c.openP(1).then((bus) => {
     return bus.scanP();
   }).then(({bus, devices}) => {
+    console.log('3 here are connected devices: ' + devices);
     childAddresses = devices;
+    return bus;
   }).then((bus) => {
-    buffer = 1;
+    const buffer = Buffer.alloc(1, 1);
     bus.i2cWriteP(0, buffer.byteLength, buffer)
       .then(({bus, bytesWritten, buffer}) => {
-        expect(bytesWritten).to.equal(buffer.length);
-      })
-  }).then((bus) => {
-    async.eachOfSeries(childAddresses, (item, key) => {
-      bus.i2cReadP(item, 4, recievedMesage)
-      .then((err, bytesRead, recievedMessage) => {
-        heaterTypes[key] = recievedMessage;
-      });
-    });
-  }).then((bus) => {
-    return bus.closeP();
-  }).then(() => {
-    for (let ind = 0, l = childAddresses.length; ind < l; ind += 1) {
-      main.db.collection('Heater_Database').insertMany([
-        templateGet(ind, 1, heaterTypes[ind][0], childAddresses[ind]),
-        templateGet(ind, 2, heaterTypes[ind][1], childAddresses[ind]),
-        templateGet(ind, 3, heaterTypes[ind][2], childAddresses[ind]),
-        templateGet(ind, 4, heaterTypes[ind][3], childAddresses[ind]),
-      ]);
-    }
-  }).then(() => { main.heatersMapped = true; });
+        expect(bytesWritten).to.equal(1);
+        console.log('4 msg written');
+        return bus;
+      }).then((bus) => {   // i2cWriteP finished
+        let recievedMessage = Buffer.alloc(4);
+        Promise.resolve()
+        .then(() => {
+          async.eachOfSeries(childAddresses, (item, key) => {
+            bus.i2cReadP(item, 4, recievedMessage)
+            .then((err, bytesRead, recievedMessage) => {
+              heaterTypes[key] = recievedMessage;
+    	      console.log('5 msg received: ' + heaterTypes[key])
+            })
+          });
+          return bus;
+        }).then((bus) => {
+          return bus.closeP().catch((err) => { throw (err) });
+        }).then(() => {
+          for (let ind = 0, l = childAddresses.length; ind < l; ind += 1) {
+            db.collection('Heater_Database').insertMany([
+              templateGet(ind, 1, heaterTypes[ind][0], childAddresses[ind]),
+              templateGet(ind, 2, heaterTypes[ind][1], childAddresses[ind]),
+              templateGet(ind, 3, heaterTypes[ind][2], childAddresses[ind]),
+              templateGet(ind, 4, heaterTypes[ind][3], childAddresses[ind]),
+            ]);
+          }
+        }).then(() => {
+          heatersMapped = true; 
+          if (heatersMapped) {
+            systemInitialized = true;
+            console.log('System Initialized');
+          }
+          else console.log('System did not setup correctly');
+        })
+
 };
 
 // Boilerplate callback
@@ -286,12 +294,10 @@ module.exports = {
   broadcastData: broadcastData,
   readData: readData,
   processData: processData,
-}
-
-module.exports = {
   childAddresses: childAddresses,
   statusBroadcasted: statusBroadcasted,
   readingFinished: readingFinished,
   statusProcessed: statusProcessed,
-  systemInitialized: systemInitialized
-}
+  systemInitialized: systemInitialized,
+};
+

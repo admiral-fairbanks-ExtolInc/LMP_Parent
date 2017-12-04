@@ -5,7 +5,7 @@ const Promise = require('bluebird');
 const express = require('express');
 const Gpio = require('onoff').Gpio;
 const NanoTimer = require('nanotimer');
-const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
+
 
 const digIn = [5, 6, 13];
 const digOut = [16, 19, 20, 26];
@@ -44,7 +44,7 @@ const lmpFltedOut = {
   Pin: digOut[3],
   Type: 'digOut',
 };
-const url = 'mongodb://localhost:27017/mydb';
+
 const i2cTmr = new NanoTimer();
 const app = express();
 // IO Configuration
@@ -61,13 +61,12 @@ const infoBuffers = new Array([Data.childAddresses.length]);
 
 let tempInfo;
 let dataloggingInfo;
-let db;
 let dbCreated;
 let systemInitialized;
 let readingAndLoggingActive;
 let childStatuses = [];
 let logRequestSent;
-let heatersMapped;
+
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 const i2cPromise = Promise.resolve()
@@ -108,6 +107,8 @@ const i2cPromise = Promise.resolve()
     coolingAirPin.write(coolingAirOut.Value);
     cycleCompletePin.write(cycleCompleteOut.Value);
     lmpFltedPin.write(lmpFltedOut.Value);
+  }).catch((err) => {
+    throw (err)
   });
 
 // Watch Input Pins, Update value accordingly
@@ -131,7 +132,6 @@ i2cTmr.setInterval(() => {
     i2cPromise();
   }
   else if (!Data.systemInitialized) {
-    // console.log('entering setup')
     Data.setupLoop();
   }
 }, '', '750m');
@@ -139,8 +139,6 @@ i2cTmr.setInterval(() => {
 
 module.exports = {
   dataloggingInfo,
-  db,
-  heatersMapped,
   logRequestSent,
   infoBuffers,
   childStatuses,
