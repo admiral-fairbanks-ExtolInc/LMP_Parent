@@ -252,6 +252,20 @@ function populateDatabase(database) {
         return bus;
       }).then((bus) => {   // i2cWriteP finished
         let recievedMessage = Buffer.alloc(4);
+        bus.i2cReadP(item, 4, recievedMessage)
+          .then((err, bytesRead, recievedMessage) => {
+            let heaterTypes = recievedMessage;
+            console.log('5 msg received: ' + heaterTypes);
+            return {heaterTypes, key};
+          }).then((heaterTypes) => {
+            database.collection('Heater_Database').insertMany([
+              templateGet(key, 1, heaterTypes[0], childAddresses[key]),
+              templateGet(key, 2, heaterTypes[1], childAddresses[key]),
+              templateGet(key, 3, heaterTypes[2], childAddresses[key]),
+              templateGet(key, 4, heaterTypes[3], childAddresses[key]),
+            ]);
+          });
+          /*
         Promise.resolve().then(() => {
           async.eachOfSeries(childAddresses, (item, key) => {
             bus.i2cReadP(item, 4, recievedMessage)
@@ -279,6 +293,7 @@ function populateDatabase(database) {
           });
           return bus;
         }).catch((err) => { throw (err) })
+        */
       })
   })
 }
