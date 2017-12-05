@@ -6,6 +6,7 @@ const async = require('async');
 const moment = require('moment');
 const main = require('./i2cRoutine');
 const i2c = require('i2c-bus');
+const i2cP = require('./my-i2c-bus')
 const chai = require('chai');
 const expect = chai.expect;
 const MongoClient = require('mongodb').MongoClient;
@@ -242,35 +243,43 @@ function setupLoop() {
 function populateDatabase(database) {
   const broadcastBuff = Buffer.alloc(1, 1);
   async.series([
-    i2c1.scan((err, dev) => {
-      if (err) throw err;
-      childAddresses = dev;
-      console.log('3 devices scanned: ' + childAddresses);
-    }),
-    i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
-      (err, bytesWritten, buffer) => {
-      expect(bytesWritten).to.equal(broadcastBuff.byteLength);
-      if (err) throw err;
-      console.log('4 msg written');
-    }),
-    async.eachOfSeries(childAddresses, (item, key, cb()) => {
-      let receivedBuff = Buffer.alloc(4);
-      let heaterTypes;
-      i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
-        (err, bytesRead, receivedBuff) => {
+    (cb) => {
+      i2c1.scan((err, dev) => {
         if (err) throw err;
-        expect(bytesRead).to.equal(receivedBuff.byteLength);
-        heaterTypes = receivedBuff.toString
-        console.log('5 msg received: ' + heaterTypes);
-        db.collection('Heater_Database').insertMany([
-          templateGet(key, 1, heaterTypes[0], childAddresses[key]),
-          templateGet(key, 2, heaterTypes[1], childAddresses[key]),
-          templateGet(key, 3, heaterTypes[2], childAddresses[key]),
-          templateGet(key, 4, heaterTypes[3], childAddresses[key]),
-        ]);
+        childAddresses = dev;
+        console.log('3 devices scanned: ' + childAddresses);
       })
-    }),
-    i2c1.close(cb());
+    },
+    (cb) => {
+      i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
+        (err, bytesWritten, buffer) => {
+        expect(bytesWritten).to.equal(broadcastBuff.byteLength);
+        if (err) throw err;
+        console.log('4 msg written');
+      })
+    },
+    (cb) => {
+      async.eachOfSeries(childAddresses, (item, key, cb()) => {
+        let receivedBuff = Buffer.alloc(4);
+        let heaterTypes;
+        i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
+          (err, bytesRead, receivedBuff) => {
+          if (err) throw err;
+          expect(bytesRead).to.equal(receivedBuff.byteLength);
+          heaterTypes = receivedBuff.toString
+          console.log('5 msg received: ' + heaterTypes);
+          db.collection('Heater_Database').insertMany([
+            templateGet(key, 1, heaterTypes[0], childAddresses[key]),
+            templateGet(key, 2, heaterTypes[1], childAddresses[key]),
+            templateGet(key, 3, heaterTypes[2], childAddresses[key]),
+            templateGet(key, 4, heaterTypes[3], childAddresses[key]),
+          ]);
+        })
+      })
+    },
+    (cb) => {
+      i2c1.close(cb());
+    }
   ]);
 }
 
