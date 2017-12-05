@@ -5,7 +5,7 @@ const Promise = require('bluebird');
 const async = require('async');
 const moment = require('moment');
 const main = require('./i2cRoutine');
-const i2c = require('./my-i2c-bus');
+const i2c = require('i2c-bus');
 const chai = require('chai');
 const expect = chai.expect;
 const MongoClient = require('mongodb').MongoClient;
@@ -19,6 +19,7 @@ let readingFinished;
 let systemInitialized;
 let heatersMapped;
 let db;
+let i2c1;
 
 const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
@@ -226,76 +227,51 @@ function templateGet(index, htrNum, htrType, address) {
 
 // Setup Promise Function
 function setupLoop() {
-  console.log('1 entering setup')
-  // Setup Loop
-  MongoClient.connect(url, (err, database) => {
-    console.log('2 successfully connected to database');
-    db = database;
-    populateDatabase(db);
-  })
+  i2c1 = i2c.open(2, (err) => {
+    console.log('1 entering setup');
+    // Setup Loop
+    MongoClient.connect(url, (err, database) => {
+      console.log('2 successfully connected to database');
+      db = database;
+      populateDatabase(db);
+    })
+  });
 }
 
 // Populates Database with blank datalog
 function populateDatabase(database) {
-  i2c.openP(1).then((bus) => {
-    return bus.scanP();
-  }).then(({bus, devices}) => {
-    console.log('3 here are connected devices: ' + devices);
-    childAddresses = devices;
-    return bus;
-  }).then((bus) => {
-    const buffer = Buffer.alloc(1, 1);
-    bus.i2cWriteP(0, buffer.byteLength, buffer)
-      .then(({bus, bytesWritten, buffer}) => {
-        expect(bytesWritten).to.equal(1);
-        console.log('4 msg written');
-        return bus;
-      }).then((bus) => {   // i2cWriteP finished
-        let recievedMessage = Buffer.alloc(4);
-        bus.i2cReadP(item, 4, recievedMessage)
-          .then((err, bytesRead, recievedMessage) => {
-            let heaterTypes = recievedMessage;
-            console.log('5 msg received: ' + heaterTypes);
-            return {heaterTypes, key};
-          }).then((heaterTypes) => {
-            database.collection('Heater_Database').insertMany([
-              templateGet(key, 1, heaterTypes[0], childAddresses[key]),
-              templateGet(key, 2, heaterTypes[1], childAddresses[key]),
-              templateGet(key, 3, heaterTypes[2], childAddresses[key]),
-              templateGet(key, 4, heaterTypes[3], childAddresses[key]),
-            ]);
-          });
-          /*
-        Promise.resolve().then(() => {
-          async.eachOfSeries(childAddresses, (item, key) => {
-            bus.i2cReadP(item, 4, recievedMessage)
-              .then((err, bytesRead, recievedMessage) => {
-                let heaterTypes = recievedMessage;
-      	        console.log('5 msg received: ' + heaterTypes);
-                return {heaterTypes, key};
-              }).then((heaterTypes) => {
-                database.collection('Heater_Database').insertMany([
-                  templateGet(key, 1, heaterTypes[0], childAddresses[key]),
-                  templateGet(key, 2, heaterTypes[1], childAddresses[key]),
-                  templateGet(key, 3, heaterTypes[2], childAddresses[key]),
-                  templateGet(key, 4, heaterTypes[3], childAddresses[key]),
-                ]);
-              });
-          }, (bus) => {
-            console.log('closing i2c connection');
-            return bus.closeP().catch((err) => { throw (err) });
-            heatersMapped = true;
-            if (heatersMapped) {
-              systemInitialized = true;
-              console.log('System Initialized');
-            }
-            else console.log('System did not setup correctly');
-          });
-          return bus;
-        }).catch((err) => { throw (err) })
-        */
+  const broadcastBuff = Buffer.alloc(1, 1);
+  async.series([
+    i2c1.scan((err, dev) => {
+      if (err) throw err;
+      childAddresses = dev;
+      console.log('3 devices scanned: ' + childAddresses);
+    }),
+    i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
+      (err, bytesWritten, buffer) => {
+      expect(bytesWritten).to.equal(broadcastBuff.byteLength);
+      if (err) throw err;
+      console.log('4 msg written');
+    }),
+    async.eachOfSeries(childAddresses, (item, key, cb()) => {
+      let receivedBuff = Buffer.alloc(4);
+      let heaterTypes;
+      i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
+        (err, bytesRead, receivedBuff) => {
+        if (err) throw err;
+        expect(bytesRead).to.equal(receivedBuff.byteLength);
+        heaterTypes = receivedBuff.toString
+        console.log('5 msg received: ' + heaterTypes);
+        db.collection('Heater_Database').insertMany([
+          templateGet(key, 1, heaterTypes[0], childAddresses[key]),
+          templateGet(key, 2, heaterTypes[1], childAddresses[key]),
+          templateGet(key, 3, heaterTypes[2], childAddresses[key]),
+          templateGet(key, 4, heaterTypes[3], childAddresses[key]),
+        ]);
       })
-  })
+    }),
+    i2c1.close(cb());
+  ]);
 }
 
 // Boilerplate callback
