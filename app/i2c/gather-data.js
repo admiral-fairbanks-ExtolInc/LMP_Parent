@@ -22,11 +22,11 @@ let heatersMapped;
 let db;
 let i2c1;
 let statuses = [];
+let infoBuffers = new Array([childAddresses.length]);
 
 const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
 const replyNoDatalog = 3;
-const infoBuffers = new Array([childAddresses.length]);
 const individualData = {
   timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
   startData: {
@@ -57,44 +57,49 @@ const individualData = {
 };
 
 // Broadcasts data to all children
-function broadcastData() {
-  let statusMessageBuffer = main.getIOdata();
-
+function broadcastData(statusMessageBuffer, cb) {
   i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
     (err, bytesRead, buffer) => {
-    expect(bytesRead).toequal(buffer.length);
+    expect(bytesRead).to.equal(buffer.length);
     if (err) throw err;
     if (statusMessageBuffer[3]) main.logRequestSent = true; // won't work. needs to be refactored.
+    console.log('4 status broadcasted');
+    cb();
   });
 };
 
 // Reads data obtained from all children
-function readData() {
+function readData(cb) {
   let data = infoBuffers;
   let readLength;
   let targetChild;
   if (!main.dataloggingInfo) readLength = 3; //update to be based on board heater number
   else readLength = 33; // same
+  let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb) => {
-    i2c1.i2cRead(item, readLength, data[key],
+    i2c1.i2cRead(item, readLength, tempBuff,
       (err, bytesRead, buffer) => {
       if (err) throw err;
       expect(bytesRead).to.equal(readLength);
-      data[key] = buffer.toString();
+      tempBuff = buffer;
+      data[key] = tempBuff;
       cb(err);
     })
   },
-  (err, data) => {
+  (err) => {
     if (err) throw err;
     infoBuffers = data;
+    console.log(infoBuffers);
+    console.log('6 finished reading');
+    cb();
   })
 };
 
 // Processes data from all children. Includes datalogging to Mongodb
-function processData() {
+function processData(IOstatus, cb) {
   let data = infoBuffers;
   let datalogIndex;
-  let statusMessageBuffer = main.getIOdata();
+  let statusMessageBuffer = IOstatus;
   const overallStatus = new Array(data.length);
   const heaterStatus = {
     lmpTemps: [0.0, 0.0, 0.0, 0.0],
@@ -175,6 +180,8 @@ function processData() {
       if (datalogIndex >= data.length) {
         datalogIndex = 0;
         statusProcessed = false;
+        console.log('8 data processing done');
+        cb();
         return;
       }
     }).then(processData())
@@ -230,7 +237,7 @@ function setupLoop() {
     console.log('1 entering setup');
     // Setup Loop
     MongoClient.connect(url, (err, database) => {
-      console.log('2 successfully connected to database');
+      //console.log('2 successfully connected to database');
       db = database;
       populateDatabase(db);
     })
@@ -245,7 +252,7 @@ function populateDatabase(database) {
       i2c1.scan((err, dev) => {
         if (err) throw err;
         childAddresses = dev;
-        console.log('3 devices scanned: ' + childAddresses);
+        //console.log('3 devices scanned: ' + childAddresses);
         cb(err);
       })
     },
@@ -254,7 +261,7 @@ function populateDatabase(database) {
         (err, bytesWritten, buffer) => {
         expect(bytesWritten).to.equal(broadcastBuff.byteLength);
         if (err) throw err;
-        console.log('4 msg written');
+        //console.log('4 msg written');
         cb(err);
       })
     },
@@ -267,7 +274,7 @@ function populateDatabase(database) {
           if (err) throw err;
           expect(bytesRead).to.equal(receivedBuff.byteLength);
           heaterTypes = receivedBuff.toString();
-          console.log('5 msg received: ' + heaterTypes);
+          //console.log('5 msg received: ' + heaterTypes);
           /*
           db.collection('Heater_Database').insertMany([
             templateGet(key, 1, heaterTypes[0], childAddresses[key]),
@@ -286,7 +293,7 @@ function populateDatabase(database) {
   ],
   (err) => {
     if (err) throw err;
-    console.log('6 setup done');
+    console.log('2 setup done');
     systemInitialized = true;
   });
 }
@@ -314,5 +321,5 @@ module.exports = {
   childAddresses: childAddresses,
   statusBroadcasted: statusBroadcasted,
   readingFinished: readingFinished,
-  statusProcessed: statusProcessed,
+  statusProcessed: statusProcessed
 };

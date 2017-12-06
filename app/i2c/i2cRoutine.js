@@ -5,6 +5,7 @@ const Promise = require('bluebird');
 const express = require('express');
 const Gpio = require('onoff').Gpio;
 const NanoTimer = require('nanotimer');
+const async = require('async');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
 
 const digIn = [5, 6, 13];
@@ -58,7 +59,7 @@ const lmpFltedPin = new Gpio(26, 'out');
 
 // End IO Config
 
-let dataloggingInfo;
+let dataloggingInfo = false;
 let dbCreated;
 let readingAndLoggingActive;
 let childStatuses = [];
@@ -67,27 +68,34 @@ let heatersMapped;
 let systemInitialized;
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
-const i2cPromise = Promise.resolve()
-  // Broadcast out Status
-  .then(() => {
-    Data.broadcastData;
-  })
-  // Then, read data from each child controller
-  .then(() => {
-    Data.readData;
-  })
-  // Then, process the data obtained from the children
-  // storing any datalogging info
-  .then(() => {
-    Data.processData;
-  })
-  // Set this flag false once complete so it can begin again on next interrupt
-  .then(() => {
+function i2cPromise() {
+  async.series([
+  (cb) => {
+    // Broadcast out Status
+    console.log('3 entering data broadcast');
+    let status = [startSigIn.Value, stopSigIn.Value, 
+      fullStrokeSigIn.Value, dataloggingInfo];
+    Data.broadcastData(Buffer.from(status), cb);
+  },
+  (cb) => {
+    // Then, read data from each child controller
+    console.log('5 entering data read');
+    Data.readData(cb);
+  },
+  (cb) => {
+    // Then, process the data obtained from the children
+    // storing any datalogging info
+    console.log('7 entering data processing');
+    Data.processData([startSigIn.Value, stopSigIn.Value, 
+      fullStrokeSigIn.Value, dataloggingInfo], cb);
+  },
+  (cb) => {
+    // Set this flag false once complete so it can begin again on next interrupt
     readingAndLoggingActive = false;
     childStatuses = Data.updateStatuses();
-  })
-  // Then update system variables and write outputs
-  .then(() => {
+    cb();
+  },
+  (cb) => {
     // Checks if all modules are at setpoint. If so, Parent needs
     // to send out Extend Press signal
     extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
@@ -108,8 +116,9 @@ const i2cPromise = Promise.resolve()
     coolingAirPin.write(coolingAirOut.Value);
     cycleCompletePin.write(cycleCompleteOut.Value);
     lmpFltedPin.write(lmpFltedOut.Value);
-  });
-
+    cb();
+  }]);
+}
 // Watch Input Pins, Update value accordingly
 startSigPin.watch((err, value) => {
   if (err) throw err;
@@ -138,12 +147,12 @@ i2cTmr.setInterval(() => {
 }, '', '750m');
 // Ends Temp Info Interrupt setup
 
-function getIOdata() {
-  return [startSigIn.Value, stopSigIn.Value, fullStrokeSigIn.Value, dataloggingInfo];
-}
+// Boilerplate callback
+function cb(err) {
+  if (err) throw (err);
+};
 
 module.exports = {
-  getIOdata: getIOdata,
   heatersMapped: heatersMapped,
   logRequestSent: logRequestSent,
 };
