@@ -14,6 +14,7 @@ const DO_HEALTHCHECK_CMD = 2;
 
 function pause(delay) {
   return new Promise(function(resolve) {
+    //resolve(true);
     setTimeout(resolve, delay);
   });
 }
@@ -54,7 +55,7 @@ describe('i2c', function () {
 
   });
   
-  it.skip('send simple request command without data to i2c slave', function (done) {
+  it('send simple request command without data to i2c slave', function (done) {
     
     i2c.openP(BUS_NUMBER).then((bus) => {
       const buffer = new Buffer(1);
@@ -73,7 +74,7 @@ describe('i2c', function () {
     
   });
   
-  it.skip('send simple request command with data to i2c slave', function (done) {
+  it('send simple request command with data to i2c slave', function (done) {
     
     i2c.openP(BUS_NUMBER).then((bus) => {
       const buffer = new Buffer(5);
@@ -98,7 +99,32 @@ describe('i2c', function () {
   it('send request-response command with data to i2c slave', function (done) {
     
     let b;
+    
+    i2c.openP(BUS_NUMBER).then((bus) => {
+      b = bus;
+      const writeBuffer = new Buffer(1);
+      writeBuffer[0] = DO_HEALTHCHECK_CMD;
+      return bus.i2cWriteP(SEEDUINO_1_ADDRESS, writeBuffer.length, writeBuffer);
+    }).then(({bus, bytesWritten, buffer}) => { // using ES6 object destructuring
+      expect(bytesWritten).to.equal(buffer.length);
+      return pause(500);
+    }).then(() => {
+      const readBuffer = Buffer.alloc(READ_BUFFER_SIZE);
+      return b.i2cReadP(SEEDUINO_1_ADDRESS, READ_BUFFER_SIZE, readBuffer);
+    }).then((bus, bytesRead, buffer) => {
+      return b.closeP();
+    }).then(() => {
+      done();
+    }).catch((err) => {
+      done(err);
+    });
+    
+  });
   
+  /*it('send request-response command with data to i2c slave', function (done) {
+    
+    let b;
+    
     i2c.openP(BUS_NUMBER).then((bus) => {
       b = bus;
       const writeBuffer = new Buffer(1);
@@ -114,7 +140,7 @@ describe('i2c', function () {
       return b.i2cReadP(SEEDUINO_1_ADDRESS, READ_BUFFER_SIZE, readBuffer);
     }).then(() => {
       return b.closeP();
-    //  return pause(100);
+      //  return pause(100);
     }).then(() => {
       done();
     }).catch((err) => {
@@ -122,5 +148,6 @@ describe('i2c', function () {
     });
     
   });
+  */
   
 });

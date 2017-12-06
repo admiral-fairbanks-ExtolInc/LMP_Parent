@@ -4,7 +4,7 @@
 
 const byte SLAVE_ADDRESS = 0x04;
 
-const int LOOP_DELAY = 100;
+const int LOOP_DELAY = 10;
 
 const int BLINK_DELAY = 50;
 
@@ -53,16 +53,16 @@ SvcRes resQueue[MAX_REQ_QUEUE_SIZE];
  */
 
 void printQueueStatus(QueueControl *qp) {
-  Serial.print("Queue status: ");
-  Serial.print(qp->name);
-  Serial.print(", head=");
-  Serial.print(qp->head);
-  Serial.print(", tail=");
-  Serial.print(qp->tail);
-  Serial.print(", count=");
-  Serial.println(qp->count);
-  Serial.print(", max=");
-  Serial.println(qp->max);
+  //Serial.print("Queue status: ");
+  //Serial.print(qp->name);
+  //Serial.print(", head=");
+  //Serial.print(qp->head);
+  //Serial.print(", tail=");
+  //Serial.print(qp->tail);
+  //Serial.print(", count=");
+  //Serial.print(qp->count);
+  //Serial.print(", max=");
+  //Serial.println(qp->max);
 }
 
 bool isEmpty(QueueControl *qp) {
@@ -89,7 +89,7 @@ void insertSvcReq(SvcReq svcReq) {
     qcReq.count++;
 
   } else {
-    Serial.println("Request Queue at max size!");
+    //Serial.println("Request Queue at max size!");
   }
 }
 
@@ -124,7 +124,7 @@ void insertSvcRes(SvcRes svcRes) {
     qcRes.count++;
 
   } else {
-    Serial.println("Response Queue at max size!");
+    //Serial.println("Response Queue at max size!");
   }
 }
 
@@ -163,7 +163,7 @@ void doBlink(byte data[], size_t len) {
   // turn the LED off (LOW is the voltage level)
   digitalWrite(LED_BUILTIN, LOW);
 
-  Serial.println("\nFinished service doBlink!");
+  //Serial.println("\nFinished service doBlink!");
 }
 
 void healthCheckReq(byte data[], size_t len) {
@@ -175,11 +175,12 @@ void healthCheckReq(byte data[], size_t len) {
   //svcRes.data = "Slave0x04";
   insertSvcRes(svcRes);
   printQueueStatus(&qcRes);
-  Serial.println("\nFinished service healthCheckReq!");
+  //Serial.println("\nFinished service healthCheckReq!");
 }
 
 void healthCheckRes(byte data[], size_t len) {
-  Wire.write(data, len);
+  Wire.write("Slave0x04");
+  //Wire.write(data, len);
 }
 
 volatile ReqServiceFP reqServices[2] = {
@@ -208,8 +209,8 @@ SvcReq readSvcReq(int numBytes) {
   data = Wire.read();
   if (isValidCommand(data)) {
     svcReq.cmd = data;
-    Serial.print("Received valid command=");
-    Serial.println(data);
+    //Serial.print("Received valid command=");
+    //Serial.println(data);
     // check if command includes data
     if (numBytes > 1) {
       //Serial.println("Reading command data:");
@@ -228,7 +229,7 @@ SvcReq readSvcReq(int numBytes) {
     }
 
   } else {
-    Serial.println("Received invalid command");
+    //Serial.println("Received invalid command");
     svcReq = NULL_SvcReq;
   }
 
@@ -240,7 +241,7 @@ void handleReceive(int numBytes) {
   if (numBytes > 0) {
     svcReq = readSvcReq(numBytes);
     insertSvcReq(svcReq);
-    Serial.println("Inserted svcReq");
+    //Serial.println("Inserted svcReq");
     printQueueStatus(&qcReq);
   }
 }
@@ -255,7 +256,7 @@ void execQueuedSvcReq() {
   if (!isEmpty(&qcReq)) {
     SvcReq svcReq = removeSvcReq();
     processSvcReq(svcReq);
-    Serial.println("Removed svcReq");
+    //Serial.println("Removed svcReq");
     printQueueStatus(&qcReq);
   }
 
@@ -271,10 +272,10 @@ void handleRequest() {
   if (!isEmpty(&qcRes)) {
     SvcRes svcRes = removeSvcRes();
     processSvcRes(svcRes);
-    Serial.println("Removed svcRes");
+    //Serial.println("Removed svcRes");
     printQueueStatus(&qcRes);
   } else {
-    Serial.println("Response Queue is empty!");
+    //Serial.println("Response Queue is empty!");
   }
 }
 
@@ -283,13 +284,14 @@ void setup() {
   Wire.begin(SLAVE_ADDRESS);    // join i2c bus with slave address
   Wire.onReceive(handleReceive); // register event
   Wire.onRequest(handleRequest); // register event
-  Serial.begin(9600);           // start serial for output
+
+  //Serial.begin(9600);           // start serial for output
 
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop() {
-  execQueuedSvcReq();
   delay(LOOP_DELAY);
+  execQueuedSvcReq();
 }
