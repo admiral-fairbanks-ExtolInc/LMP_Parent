@@ -5,7 +5,8 @@
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node ./app/server/api.js",
-    "client": "node start-client.js"
+    "client": "node start-client.js",
+    "i2c": "node ./app/i2c/i2cRoutine.js"
   },
   "repository": {
     "type": "git",

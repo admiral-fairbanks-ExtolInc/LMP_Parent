@@ -72,7 +72,7 @@ function i2cPromise() {
   async.series([
   (cb) => {
     // Broadcast out Status
-    let status = [startSigIn.Value, stopSigIn.Value, 
+    let status = [startSigIn.Value, stopSigIn.Value,
       fullStrokeSigIn.Value, dataloggingInfo];
     Data.broadcastData(Buffer.from(status), cb);
   },
@@ -83,13 +83,13 @@ function i2cPromise() {
   (cb) => {
     // Then, process the data obtained from the children
     // storing any datalogging info
-    Data.processData([startSigIn.Value, stopSigIn.Value, 
+    Data.processData([startSigIn.Value, stopSigIn.Value,
       fullStrokeSigIn.Value, dataloggingInfo], cb);
   },
   (cb) => {
     // Set this flag false once complete so it can begin again on next interrupt
     readingAndLoggingActive = false;
-    
+
     childStatuses = Data.updateValue();
     console.log(childStatuses);
     cb();
@@ -122,6 +122,11 @@ function i2cPromise() {
     cb();
   }]);
 }
+
+function getChildInfo() {
+  return childStatuses;
+}
+
 // Watch Input Pins, Update value accordingly
 startSigPin.watch((err, value) => {
   if (err) throw err;
@@ -158,4 +163,5 @@ function cb(err) {
 module.exports = {
   heatersMapped: heatersMapped,
   logRequestSent: logRequestSent,
+  getChildInfo: getChildInfo,
 };
