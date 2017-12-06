@@ -21,10 +21,12 @@ let systemInitialized;
 let heatersMapped;
 let db;
 let i2c1;
+let statuses = [];
 
 const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
 const replyNoDatalog = 3;
+const infoBuffers = new Array([Data.childAddresses.length]);
 const individualData = {
   timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
   startData: {
@@ -56,47 +58,43 @@ const individualData = {
 
 // Broadcasts data to all children
 function broadcastData() {
-  statusMessageBuffer = [main.startSigIn.Value, main.stopSigIn.Value,
-    main.fullStrokeSigIn.Value, main.dataloggingInfo];
-  i2c.openP(1).then((bus) => {
-    return bus.i2cWriteP(0, statusMessageBuffer.byteLength, statusMessageBuffer)
-    .then(({bus, bytesWritten, buffer}) => {
-      expect(bytesWritten).toequal(buffer.length);
-      if (main.dataloggingInfo) main.logRequestSent = true;
-      return bus.closeP();
-    });
+  let statusMessageBuffer = main.getIOdata();
+
+  i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
+    (err, bytesRead, buffer) => {
+    expect(bytesRead).toequal(buffer.length);
+    if (err) throw err;
+    if (statusMessageBuffer[3]) main.logRequestSent = true; // won't work. needs to be refactored.
   });
 };
 
 // Reads data obtained from all children
 function readData() {
-  let data = main.infoBuffers;
+  let data = infoBuffers;
   let readLength;
   let targetChild;
-  if (!main.tempInfo && !main.dataloggingInfo) readLength = 1;
-  else if (main.tempInfo && !main.dataloggingInfo) {
-    readLength = 3; //update to be based on board heater number
-  }
-  else if (main.dataloggingInfo) readLength = 33; // same
-  i2c.openP(1).then((bus) => {
-    return bus.i2cReadP(targetChild, readLength)
-      .then(({bus, bytesRead, buffer}) => {
-        expect(buffer.toString()).to.equal(replyDatalog || replyNoDatalog);
-        return bus.closeP();
-        data[targetChild] = recievedMessage;
-        targetChild += 1;
-        if (targetChild >= data.length) {
-          main.infoBuffers = data;
-          return;
-        }
-      }).then(readData());
+  if (!main.dataloggingInfo) readLength = 3; //update to be based on board heater number
+  else readLength = 33; // same
+  async.eachOfSeries(childAddresses, (item, key, cb) => {
+    i2c1.i2cRead(item, readLength, data[key],
+      (err, bytesRead, buffer) => {
+      if (err) throw err;
+      expect(bytesRead).to.equal(readLength);
+      data[key] = buffer.toString();
+      cb(err);
+    })
+  },
+  (err, data) => {
+    if (err) throw err;
+    infoBuffers = data;
   })
 };
 
 // Processes data from all children. Includes datalogging to Mongodb
 function processData() {
-  let data = main.infoBuffers;
+  let data = infoBuffers;
   let datalogIndex;
+  let statusMessageBuffer = main.getIOdata();
   const overallStatus = new Array(data.length);
   const heaterStatus = {
     lmpTemps: [0.0, 0.0, 0.0, 0.0],
@@ -122,9 +120,9 @@ function processData() {
       overallStatus[i] = heaterStatus;
     }
     statusProcessed = true;
-    main.childStatuses = overallStatus;
+    statuses = overallStatus;
   }
-  if (main.dataloggingInfo) {
+  if (statusMessageBuffer[3]) {
   const k = 30 * targetHeater;
     individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
     individualData.startData.startTime = data[datalogIndex]
@@ -157,7 +155,7 @@ function processData() {
       .readInt16BE(35 + k) / 10;
     individualData.cycleCompleteData.cycleCompletePos = data[datalogIndex]
       .readInt16BE(37 + k) / 100;
-    main.db.collection('Heater_Database').update(
+    db.collection('Heater_Database').update(
       {
         heaterId: {
           heaterNumber: 1 + datalogIndex + targetHeater,
@@ -179,7 +177,7 @@ function processData() {
         statusProcessed = false;
         return;
       }
-    }).then(processData(data, main.childStatuses))
+    }).then(processData())
       .catch((err) => {throw (err);});
   }
 };
@@ -248,6 +246,7 @@ function populateDatabase(database) {
         if (err) throw err;
         childAddresses = dev;
         console.log('3 devices scanned: ' + childAddresses);
+        cb(err);
       })
     },
     (cb) => {
@@ -256,6 +255,7 @@ function populateDatabase(database) {
         expect(bytesWritten).to.equal(broadcastBuff.byteLength);
         if (err) throw err;
         console.log('4 msg written');
+        cb(err);
       })
     },
     (cb) => {
@@ -275,10 +275,10 @@ function populateDatabase(database) {
             templateGet(key, 4, heaterTypes[3], childAddresses[key]),
           ]);
         })
-      })
-    },
-    (cb) => {
-      i2c1.close(cb());
+      },
+      (err) => {
+        cb(err);
+      });
     }
   ]);
 }
@@ -288,11 +288,16 @@ function cb(err) {
   if (err) throw (err);
 };
 
+function updateStatuses() {
+  return statuses;
+}
+
 module.exports = {
   setupLoop: setupLoop,
   broadcastData: broadcastData,
   readData: readData,
   processData: processData,
+  updateStatuses: updateStatuses,
   childAddresses: childAddresses,
   statusBroadcasted: statusBroadcasted,
   readingFinished: readingFinished,

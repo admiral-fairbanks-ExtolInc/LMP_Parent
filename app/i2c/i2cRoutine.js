@@ -57,11 +57,8 @@ const cycleCompletePin = new Gpio(20, 'out');
 const lmpFltedPin = new Gpio(26, 'out');
 
 // End IO Config
-const infoBuffers = new Array([Data.childAddresses.length]);
 
-let tempInfo;
 let dataloggingInfo;
-let db;
 let dbCreated;
 let systemInitialized;
 let readingAndLoggingActive;
@@ -85,7 +82,10 @@ const i2cPromise = Promise.resolve()
     Data.processData;
   })
   // Set this flag false once complete so it can begin again on next interrupt
-  .then(() => { readingAndLoggingActive = false; })
+  .then(() => {
+    readingAndLoggingActive = false;
+    childStatuses = data.updateStatuses();
+  })
   // Then update system variables and write outputs
   .then(() => {
     // Checks if all modules are at setpoint. If so, Parent needs
@@ -137,14 +137,12 @@ i2cTmr.setInterval(() => {
 }, '', '750m');
 // Ends Temp Info Interrupt setup
 
+function getIOdata() {
+  return [startSigIn.Value, stopSigIn.Value, fullStrokeSigIn.Value, dataloggingInfo];
+}
+
 module.exports = {
-  dataloggingInfo,
-  db,
-  heatersMapped,
-  logRequestSent,
-  infoBuffers,
-  childStatuses,
-  startSigIn,
-  stopSigIn,
-  fullStrokeSigIn,
+  getIOdata: getIOdata,
+  heatersMapped: heatersMapped,
+  logRequestSent: logRequestSent,
 };
