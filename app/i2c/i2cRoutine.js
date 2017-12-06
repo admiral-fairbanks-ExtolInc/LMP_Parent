@@ -60,11 +60,11 @@ const lmpFltedPin = new Gpio(26, 'out');
 
 let dataloggingInfo;
 let dbCreated;
-let systemInitialized;
 let readingAndLoggingActive;
 let childStatuses = [];
 let logRequestSent;
 let heatersMapped;
+let systemInitialized;
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 const i2cPromise = Promise.resolve()
@@ -84,7 +84,7 @@ const i2cPromise = Promise.resolve()
   // Set this flag false once complete so it can begin again on next interrupt
   .then(() => {
     readingAndLoggingActive = false;
-    childStatuses = data.updateStatuses();
+    childStatuses = Data.updateStatuses();
   })
   // Then update system variables and write outputs
   .then(() => {
@@ -126,12 +126,13 @@ fullStrokePin.watch((err, value) => {
 // End Watch Input Pins
 
 i2cTmr.setInterval(() => {
-  if (!readingAndLoggingActive && Data.systemInitialized) {
+  systemInitialized = Data.isSystemInitialized()
+
+  if (!readingAndLoggingActive && systemInitialized) {
     readingAndLoggingActive = true;
     i2cPromise();
   }
-  else if (!Data.systemInitialized) {
-    // console.log('entering setup')
+  else if (!systemInitialized) {
     Data.setupLoop();
   }
 }, '', '750m');

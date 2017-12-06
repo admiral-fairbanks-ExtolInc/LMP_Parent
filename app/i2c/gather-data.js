@@ -26,7 +26,7 @@ let statuses = [];
 const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
 const replyNoDatalog = 3;
-const infoBuffers = new Array([Data.childAddresses.length]);
+const infoBuffers = new Array([childAddresses.length]);
 const individualData = {
   timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
   startData: {
@@ -226,7 +226,7 @@ function templateGet(index, htrNum, htrType, address) {
 
 // Setup Promise Function
 function setupLoop() {
-  i2c1 = i2c.open(2, (err) => {
+  i2c1 = i2c.open(1, (err) => {
     console.log('1 entering setup');
     // Setup Loop
     MongoClient.connect(url, (err, database) => {
@@ -259,28 +259,36 @@ function populateDatabase(database) {
       })
     },
     (cb) => {
-      async.eachOfSeries(childAddresses, (item, key, cb()) => {
+      async.eachOfSeries(childAddresses, (item, key, cb) => {
         let receivedBuff = Buffer.alloc(4);
         let heaterTypes;
         i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
           (err, bytesRead, receivedBuff) => {
           if (err) throw err;
           expect(bytesRead).to.equal(receivedBuff.byteLength);
-          heaterTypes = receivedBuff.toString
+          heaterTypes = receivedBuff.toString();
           console.log('5 msg received: ' + heaterTypes);
+          /*
           db.collection('Heater_Database').insertMany([
             templateGet(key, 1, heaterTypes[0], childAddresses[key]),
             templateGet(key, 2, heaterTypes[1], childAddresses[key]),
             templateGet(key, 3, heaterTypes[2], childAddresses[key]),
             templateGet(key, 4, heaterTypes[3], childAddresses[key]),
           ]);
+          */
+          cb(err);
         })
       },
       (err) => {
         cb(err);
       });
     }
-  ]);
+  ],
+  (err) => {
+    if (err) throw err;
+    console.log('6 setup done');
+    systemInitialized = true;
+  });
 }
 
 // Boilerplate callback
@@ -292,15 +300,19 @@ function updateStatuses() {
   return statuses;
 }
 
+function isSystemInitialized() {
+  return systemInitialized;
+}
+
 module.exports = {
   setupLoop: setupLoop,
   broadcastData: broadcastData,
   readData: readData,
   processData: processData,
   updateStatuses: updateStatuses,
+  isSystemInitialized: isSystemInitialized,
   childAddresses: childAddresses,
   statusBroadcasted: statusBroadcasted,
   readingFinished: readingFinished,
   statusProcessed: statusProcessed,
-  systemInitialized: systemInitialized,
 };
