@@ -15,7 +15,7 @@ const Server = require('mongodb').Server;
 let childAddresses = [5];
 let targetHeater;
 let statusBroadcasted;
-let statusProcessed;
+let statusProcessed = false;
 let readingFinished;
 let systemInitialized;
 let heatersMapped;
@@ -63,7 +63,7 @@ function broadcastData(statusMessageBuffer, cb) {
     expect(bytesRead).to.equal(buffer.length);
     if (err) throw err;
     if (statusMessageBuffer[3]) main.logRequestSent = true; // won't work. needs to be refactored.
-    console.log('4 status broadcasted');
+    console.log('3 status broadcasted');
     cb();
   });
 };
@@ -89,8 +89,7 @@ function readData(cb) {
   (err) => {
     if (err) throw err;
     infoBuffers = data;
-    console.log(infoBuffers);
-    console.log('6 finished reading');
+    console.log('4 finished reading');
     cb();
   })
 };
@@ -102,7 +101,7 @@ function processData(IOstatus, cb) {
   let statusMessageBuffer = IOstatus;
   const overallStatus = new Array(data.length);
   const heaterStatus = {
-    lmpTemps: [0.0, 0.0, 0.0, 0.0],
+    lmpTemps: [],
     heaterCycleRunning: false,
     heaterAtSetpoint: false,
     heaterAtRelease: false,
@@ -122,11 +121,16 @@ function processData(IOstatus, cb) {
       for (let j = 0; j < 4; j += 4) {
         heaterStatus.lmpTemps[j] = data[i].readInt16BE(1) / 10;
       }
+      
       overallStatus[i] = heaterStatus;
     }
     statusProcessed = true;
     statuses = overallStatus;
+    statusProcessed = false;
+    console.log('5 data processing done');
+    cb();
   }
+  /*
   if (statusMessageBuffer[3]) {
   const k = 30 * targetHeater;
     individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
@@ -187,6 +191,7 @@ function processData(IOstatus, cb) {
     }).then(processData())
       .catch((err) => {throw (err);});
   }
+  */
 };
 
 // Creates datalog Template
@@ -301,14 +306,14 @@ function populateDatabase(database) {
 // Boilerplate callback
 function cb(err) {
   if (err) throw (err);
-};
-
-function updateStatuses() {
-  return statuses;
 }
 
 function isSystemInitialized() {
   return systemInitialized;
+}
+function updateValue() {
+  let k = statuses;
+  return k;
 }
 
 module.exports = {
@@ -316,10 +321,11 @@ module.exports = {
   broadcastData: broadcastData,
   readData: readData,
   processData: processData,
-  updateStatuses: updateStatuses,
+  updateValue: updateValue,
   isSystemInitialized: isSystemInitialized,
   childAddresses: childAddresses,
   statusBroadcasted: statusBroadcasted,
   readingFinished: readingFinished,
-  statusProcessed: statusProcessed
+  statusProcessed: statusProcessed,
+  statuses: statuses,
 };

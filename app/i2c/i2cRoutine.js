@@ -72,27 +72,26 @@ function i2cPromise() {
   async.series([
   (cb) => {
     // Broadcast out Status
-    console.log('3 entering data broadcast');
     let status = [startSigIn.Value, stopSigIn.Value, 
       fullStrokeSigIn.Value, dataloggingInfo];
     Data.broadcastData(Buffer.from(status), cb);
   },
   (cb) => {
     // Then, read data from each child controller
-    console.log('5 entering data read');
     Data.readData(cb);
   },
   (cb) => {
     // Then, process the data obtained from the children
     // storing any datalogging info
-    console.log('7 entering data processing');
     Data.processData([startSigIn.Value, stopSigIn.Value, 
       fullStrokeSigIn.Value, dataloggingInfo], cb);
   },
   (cb) => {
     // Set this flag false once complete so it can begin again on next interrupt
     readingAndLoggingActive = false;
-    childStatuses = Data.updateStatuses();
+    
+    childStatuses = Data.updateValue();
+    console.log(childStatuses);
     cb();
   },
   (cb) => {
@@ -112,10 +111,14 @@ function i2cPromise() {
     // Checks to see if any modules are faulted. If so, Parent
     // needs to send out LMP Faulted signal
     lmpFltedOut.Value = childStatuses.some(elem => elem.heaterFaulted);
-    extendPressPin.write(extendPressOut.Value);
-    coolingAirPin.write(coolingAirOut.Value);
-    cycleCompletePin.write(cycleCompleteOut.Value);
-    lmpFltedPin.write(lmpFltedOut.Value);
+    extendPressPin.write(extendPressOut.Value, (err) => {
+      if (err) throw err;});
+    coolingAirPin.write(coolingAirOut.Value, (err) => {
+      if (err) throw err;});
+    cycleCompletePin.write(cycleCompleteOut.Value, (err) => {
+      if (err) throw err;});
+    lmpFltedPin.write(lmpFltedOut.Value, (err) => {
+      if (err) throw err;});
     cb();
   }]);
 }
