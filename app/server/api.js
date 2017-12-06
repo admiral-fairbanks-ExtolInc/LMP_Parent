@@ -1,11 +1,13 @@
 'use strict';
 
+const i2c = require('../i2c/i2cRoutine.js');
 const express = require('express');
 const moment = require('moment');
 const bodyParser = require('body-parser');
 const exec = require('child_process').exec;
 const app = express();
 let count = 0;
+let childStatuses;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(function(req, res, next) {
@@ -23,8 +25,9 @@ if (process.env.NODE_ENV === "production") {
 }
 
 app.get('/server/tempInfo', (req, res) => {
+  childStatuses = i2c.getChildInfo();
   let packet = {
-    temp: count
+    temp: childStatuses[0].lmpTemps
   };
   res.json(packet);
 });
@@ -74,8 +77,3 @@ function execCallback(err, stdout, stderr) {
 	if(stdout) console.log(stdout);
 	if(stderr) console.log(stderr);
 }
-
-setInterval(() => {
-  count += 1;
-  if (count >= 550) count = 0;
-}, 20);
