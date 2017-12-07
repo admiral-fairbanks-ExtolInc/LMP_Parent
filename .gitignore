@@ -11,3 +11,8 @@ bower_components
 tmp
 logs
 
+# vim temp files
+*.swp
+*.swo
+
+

@@ -1,38 +1,56 @@
 {
   "name": "LMP_Parent",
-  "version": "1.0.0",
-  "description": "WebServer for LMP Prototype",
-  "main": "reloader.js",
+  "version": "0.4.0",
+  "description": "Main LMP Parent code",
   "scripts": {
-    "dev": "nodemon server.js"
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node ./app/server/api.js",
+    "client": "node start-client.js",
+    "i2c": "node ./app/i2c/i2cRoutine.js"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/admiral-fairbanks-ExtolInc/LMP_Parent"
   },
-  "author": "",
+  "author": "David Webster",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/admiral-fairbanks-ExtolInc/learning_html/issues"
+    "url": "https://github.com/admiral-fairbanks-ExtolInc/lmp-background"
   },
-  "homepage": "https://github.com/admiral-fairbanks-ExtolInc/learning_html#readme",
+  "homepage": "https://github.com/admiral-fairbanks-ExtolInc/lmp-background#readme",
   "dependencies": {
+    "ajv": "^5.3.0",
     "async": "^2.6.0",
+    "axios": "^0.17.1",
     "bluebird": "^3.5.1",
     "bootstrap": "^4.0.0-beta.2",
     "browser-sync": "^2.13.0",
+    "co": "^4.6.0",
+    "concurrently": "^3.5.0",
     "connect": "^3.6.5",
+    "d3": "^4.12.0",
+    "d3-array": "^1.2.1",
+    "d3-scale": "^1.0.7",
+    "d3-shape": "^1.2.0",
     "express": "^4.16.2",
     "flot": "^0.8.0-alpha",
     "font-awesome": "^4.7.0",
     "graceful-fs": "^4.1.11",
     "i2c-bus": "^1.2.4",
+    "install": "^0.10.1",
     "jquery": "^3.2.1",
     "minimatch": "^3.0.4",
     "moment": "^2.19.2",
+    "mongodb": "^2.2.33",
     "nanotimer": "^0.3.15",
+    "onoff": "^1.1.8",
     "pm2": "^2.7.2",
     "popper.js": "^1.12.7",
+    "react": "^16.1.1",
+    "react-dom": "^16.1.1",
+    "react-easy-chart": "^0.3.0",
+    "react-faux-dom": "^4.1.0",
+    "react-scrollspy": "^3.3.4",
     "rpi-gpio": "^0.9.1",
     "timer": "0.0.2"
   },
