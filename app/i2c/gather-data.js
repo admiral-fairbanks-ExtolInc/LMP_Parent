@@ -63,7 +63,7 @@ function broadcastData(statusMessageBuffer, cb) {
     expect(bytesRead).to.equal(buffer.length);
     if (err) throw err;
     if (statusMessageBuffer[3]) main.logRequestSent = true; // won't work. needs to be refactored.
-    console.log('3 status broadcasted');
+    
     cb();
   });
 };
@@ -89,7 +89,6 @@ function readData(cb) {
   (err) => {
     if (err) throw err;
     infoBuffers = data;
-    console.log('4 finished reading');
     cb();
   })
 };
@@ -121,13 +120,11 @@ function processData(IOstatus, cb) {
       for (let j = 0; j < 4; j += 4) {
         heaterStatus.lmpTemps[j] = data[i].readInt16BE(1) / 10;
       }
-      
       overallStatus[i] = heaterStatus;
     }
     statusProcessed = true;
     statuses = overallStatus;
     statusProcessed = false;
-    console.log('5 data processing done');
     cb();
   }
   /*
@@ -184,7 +181,6 @@ function processData(IOstatus, cb) {
       if (datalogIndex >= data.length) {
         datalogIndex = 0;
         statusProcessed = false;
-        console.log('8 data processing done');
         cb();
         return;
       }
@@ -239,10 +235,8 @@ function templateGet(index, htrNum, htrType, address) {
 // Setup Promise Function
 function setupLoop() {
   i2c1 = i2c.open(1, (err) => {
-    console.log('1 entering setup');
     // Setup Loop
     MongoClient.connect(url, (err, database) => {
-      //console.log('2 successfully connected to database');
       db = database;
       populateDatabase(db);
     })
