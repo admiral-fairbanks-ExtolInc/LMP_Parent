@@ -4,10 +4,15 @@ const i2c = require('../i2c/i2cRoutine.js');
 const express = require('express');
 const moment = require('moment');
 const bodyParser = require('body-parser');
+const NanoTimer = require('nanotimer');
 const exec = require('child_process').exec;
 const app = express();
+const i2cTmr = new NanoTimer();
 let count = 0;
 let childStatuses;
+
+i2cTmr.setInterval(i2c.i2cIntervalTask, '', '750m');
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(function(req, res, next) {
@@ -26,8 +31,9 @@ if (process.env.NODE_ENV === "production") {
 
 app.get('/server/tempInfo', (req, res) => {
   childStatuses = i2c.getChildInfo();
+  console.log(childStatuses[0].lmpTemps[0]);
   let packet = {
-    temp: childStatuses[0].lmpTemps
+    temp: childStatuses[0].lmpTemps[0]
   };
   res.json(packet);
 });

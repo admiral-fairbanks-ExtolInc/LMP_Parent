@@ -68,7 +68,7 @@ let heatersMapped;
 let systemInitialized;
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
-function i2cPromise() {
+function i2cHandling() {
   async.series([
   (cb) => {
     // Broadcast out Status
@@ -91,7 +91,7 @@ function i2cPromise() {
     readingAndLoggingActive = false;
 
     childStatuses = Data.updateValue();
-    console.log(childStatuses);
+    // console.log(childStatuses);
     cb();
   },
   (cb) => {
@@ -142,18 +142,17 @@ fullStrokePin.watch((err, value) => {
 });
 // End Watch Input Pins
 
-i2cTmr.setInterval(() => {
+function i2cIntervalTask() {
   systemInitialized = Data.isSystemInitialized()
 
   if (!readingAndLoggingActive && systemInitialized) {
     readingAndLoggingActive = true;
-    i2cPromise();
+    i2cHandling();
   }
   else if (!systemInitialized) {
     Data.setupLoop();
   }
-}, '', '750m');
-// Ends Temp Info Interrupt setup
+}
 
 // Boilerplate callback
 function cb(err) {
@@ -164,4 +163,5 @@ module.exports = {
   heatersMapped: heatersMapped,
   logRequestSent: logRequestSent,
   getChildInfo: getChildInfo,
+  i2cIntervalTask: i2cIntervalTask,
 };

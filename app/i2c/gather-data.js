@@ -60,7 +60,6 @@ const individualData = {
 function broadcastData(statusMessageBuffer, cb) {
   i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
     (err, bytesRead, buffer) => {
-    expect(bytesRead).to.equal(buffer.length);
     if (err) throw err;
     if (statusMessageBuffer[3]) main.logRequestSent = true; // won't work. needs to be refactored.
     
@@ -80,7 +79,6 @@ function readData(cb) {
     i2c1.i2cRead(item, readLength, tempBuff,
       (err, bytesRead, buffer) => {
       if (err) throw err;
-      expect(bytesRead).to.equal(readLength);
       tempBuff = buffer;
       data[key] = tempBuff;
       cb(err);
@@ -258,7 +256,6 @@ function populateDatabase(database) {
     (cb) => {
       i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
         (err, bytesWritten, buffer) => {
-        expect(bytesWritten).to.equal(broadcastBuff.byteLength);
         if (err) throw err;
         //console.log('4 msg written');
         cb(err);
@@ -271,7 +268,6 @@ function populateDatabase(database) {
         i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
           (err, bytesRead, receivedBuff) => {
           if (err) throw err;
-          expect(bytesRead).to.equal(receivedBuff.byteLength);
           heaterTypes = receivedBuff.toString();
           //console.log('5 msg received: ' + heaterTypes);
           /*
