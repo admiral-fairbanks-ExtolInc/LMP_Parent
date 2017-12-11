@@ -7,11 +7,19 @@ const bodyParser = require('body-parser');
 const NanoTimer = require('nanotimer');
 const exec = require('child_process').exec;
 const app = express();
+const Gpio = require('onoff').Gpio;
 const i2cTmr = new NanoTimer();
+const startSigPin = new Gpio(5, 'in', 'both');
+const stopSigPin = new Gpio(6, 'in', 'both');
+const fullStrokePin = new Gpio(13, 'in', 'both');
 let count = 0;
 let childStatuses;
 
 i2cTmr.setInterval(i2c.i2cIntervalTask, '', '750m');
+
+startSigPin.watch(i2c.startSigPinWatch);
+stopSigPin.watch(i2c.stopSigPinWatch);
+fullStrokePin.watch(i2c.FSSigPinWatch);
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -31,10 +39,10 @@ if (process.env.NODE_ENV === "production") {
 
 app.get('/server/tempInfo', (req, res) => {
   childStatuses = i2c.getChildInfo();
-  console.log(childStatuses[0].lmpTemps[0]);
   let packet = {
     temp: childStatuses[0].lmpTemps[0]
   };
+  console.log(childStatuses[0].lmpTemps[0]);
   res.json(packet);
 });
 

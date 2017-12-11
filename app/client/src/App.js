@@ -219,7 +219,7 @@ class App extends Component {
                   xTicks={50}
                   width={this.state.componentWidth}
                   height={this.state.componentWidth / 2}
-                  yDomainRange={[-40, -30]}
+                  yDomainRange={[0, 700]}
                   axisLabels={{ x: 'Hour', y: 'Percentage' }}
                   axes
                   grid

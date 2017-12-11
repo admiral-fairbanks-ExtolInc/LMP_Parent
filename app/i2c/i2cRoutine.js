@@ -49,9 +49,6 @@ const url = 'mongodb://localhost:27017/mydb';
 const i2cTmr = new NanoTimer();
 const app = express();
 // IO Configuration
-const startSigPin = new Gpio(5, 'in');
-const stopSigPin = new Gpio(6, 'in');
-const fullStrokePin = new Gpio(13, 'in');
 const extendPressPin = new Gpio(16, 'out');
 const coolingAirPin = new Gpio(19, 'out');
 const cycleCompletePin = new Gpio(20, 'out');
@@ -128,18 +125,26 @@ function getChildInfo() {
 }
 
 // Watch Input Pins, Update value accordingly
-startSigPin.watch((err, value) => {
+function startSigPinWatch(err, value) {
   if (err) throw err;
-  startSigIn.value = value;
-});
-stopSigPin.watch((err, value) => {
+  if (value) startSigIn.Value = 0;
+  else startSigIn.Value = 1;
+  console.log('start sig:' + startSigIn.Value);
+}
+
+function stopSigPinWatch(err, value) {
   if (err) throw err;
-  stopSigIn.value = value;
-});
-fullStrokePin.watch((err, value) => {
+  if (value) stopSigIn.Value = 0;
+  else stopSigIn.Value = 1;
+  console.log('stop sig:' + stopSigIn.Value);
+}
+
+function FSSigPinWatch(err, value) {
   if (err) throw err;
-  fullStrokeSigIn.value = value;
-});
+  if (value) fullStrokeSigIn.Value = 0;
+  else fullStrokeSigIn.Value = 1;
+  console.log('full stroke sig:' + fullStrokeSigIn.Value);
+}
 // End Watch Input Pins
 
 function i2cIntervalTask() {
@@ -164,4 +169,7 @@ module.exports = {
   logRequestSent: logRequestSent,
   getChildInfo: getChildInfo,
   i2cIntervalTask: i2cIntervalTask,
+  startSigPinWatch: startSigPinWatch,
+  stopSigPinWatch: stopSigPinWatch,
+  FSSigPinWatch, FSSigPinWatch,
 };
