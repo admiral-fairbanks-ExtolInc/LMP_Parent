@@ -1,14 +1,8 @@
-'use strict';
 
-const util = require('util');
-const Promise = require('bluebird');
 const async = require('async');
 const moment = require('moment');
 const main = require('./i2cRoutine');
 const i2c = require('i2c-bus');
-const i2cP = require('./my-i2c-bus')
-const chai = require('chai');
-const expect = chai.expect;
 const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
 
@@ -22,7 +16,7 @@ let heatersMapped;
 let db;
 let i2c1;
 let statuses = [];
-let infoBuffers = new Array([childAddresses.length]);
+const infoBuffers = new Array([childAddresses.length]);
 
 const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
@@ -58,47 +52,76 @@ const individualData = {
 
 // Broadcasts data to all children
 function broadcastData(statusMessageBuffer, cb) {
-  i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
-    (err, bytesRead, buffer) => {
-    expect(bytesRead).to.equal(buffer.length);
-    if (err) throw err;
-    if (statusMessageBuffer[3]) main.logRequestSent = true; // won't work. needs to be refactored.
-    console.log('3 status broadcasted');
-    cb();
+  i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer, (err, bytesWritten, buffer) => {
+
+    if (err) {
+      return cb(err);
+    }
+
+    if (bytesWritten !== buffer.length) {
+      return cb(new Error('i2cWrite failed - bytesWritten !== buffer.length'));
+    }
+
+    if (statusMessageBuffer[3]) {
+      main.logRequestSent = true;
+      //TODO: won't work. needs to be refactored.
+      console.log('3 status broadcasted');
+    }
+
+    return cb();
+
   });
-};
+}
 
 // Reads data obtained from all children
 function readData(cb) {
-  let data = infoBuffers;
+
   let readLength;
-  let targetChild;
-  if (!main.dataloggingInfo) readLength = 3; //update to be based on board heater number
-  else readLength = 33; // same
-  let tempBuff = Buffer.alloc(readLength);
+
+  if (!main.dataloggingInfo) {
+    readLength = 3;
+  } else { //update to be based on board heater number
+    readLength = 33;
+  } // same
+
   async.eachOfSeries(childAddresses, (item, key, cb) => {
-    i2c1.i2cRead(item, readLength, tempBuff,
-      (err, bytesRead, buffer) => {
-      if (err) throw err;
-      expect(bytesRead).to.equal(readLength);
-      tempBuff = buffer;
-      data[key] = tempBuff;
-      cb(err);
-    })
-  },
-  (err) => {
-    if (err) throw err;
-    infoBuffers = data;
-    console.log('4 finished reading');
-    cb();
-  })
-};
+
+    const tempBuff = Buffer.alloc(readLength);
+
+    i2c1.i2cRead(item, readLength, tempBuff, (err, bytesRead, buffer) => {
+
+      if (err) {
+        return cb(err);
+      }
+
+      if (bytesRead !== readLength) {
+        return cb(new Error('i2cRead failed - bytesRead !== readLength'));
+      }
+
+      infoBuffers[key] = buffer;
+
+      return cb();
+
+    });
+
+  }, (err) => {
+
+    if (err) {
+      console.log('4 finished failed reading');
+    } else {
+      console.log('4 finished reading successfully');
+    }
+
+    return cb(err);
+
+  });
+}
 
 // Processes data from all children. Includes datalogging to Mongodb
 function processData(IOstatus, cb) {
-  let data = infoBuffers;
+  const data = infoBuffers;
   let datalogIndex;
-  let statusMessageBuffer = IOstatus;
+  const statusMessageBuffer = IOstatus;
   const overallStatus = new Array(data.length);
   const heaterStatus = {
     lmpTemps: [],
@@ -109,27 +132,32 @@ function processData(IOstatus, cb) {
     heaterFaulted: false,
     cycleDatalogged: false,
   };
+
   if (!statusProcessed) {
     for (let i = 0, l = data.length; i < l; i += 1) {
       const statusByte = data[i].readInt8(0);
+      /* eslint-disable no-bitwise */
       if ((statusByte & 1) === 1) { heaterStatus.heaterCycleRunning = true; }
       if ((statusByte & 2) === 2) { heaterStatus.heaterAtSetpoint = true; }
       if ((statusByte & 4) === 4) { heaterStatus.heaterAtRelease = true; }
       if ((statusByte & 8) === 8) { heaterStatus.heaterCycleComplete = true; }
       if ((statusByte & 16) === 16) { heaterStatus.heaterFaulted = true; }
       if ((statusByte & 32) === 32) { heaterStatus.cycleDatalogged = true; }
+      /* eslint-enable no-bitwise */
       for (let j = 0; j < 4; j += 4) {
         heaterStatus.lmpTemps[j] = data[i].readInt16BE(1) / 10;
       }
-      
+
       overallStatus[i] = heaterStatus;
     }
     statusProcessed = true;
     statuses = overallStatus;
     statusProcessed = false;
     console.log('5 data processing done');
-    cb();
   }
+
+  return cb();
+
   /*
   if (statusMessageBuffer[3]) {
   const k = 30 * targetHeater;
@@ -192,49 +220,108 @@ function processData(IOstatus, cb) {
       .catch((err) => {throw (err);});
   }
   */
-};
+}
+
+/**
+ * Constructor function for HeaterReading
+ * @param time
+ * @param temp
+ * @param pos
+ * @constructor
+ */
+function HeaterReading(time, temp, pos) {
+  this.time = time;
+  this.temp = temp;
+  this.pos = pos;
+}
 
 // Creates datalog Template
-function templateGet(index, htrNum, htrType, address) {
-  const heaterTemplate = {
+function getTemplate(index, htrNum, htrType, address) {
+
+  const heaterDataTypes = ['start', 'atSetpoint', 'contactDip', 'shutoff', 'cycleComplete'];
+
+  const heaterData = {
     heaterId: {
       heaterNumber: (htrNum + index),
       lmpType: htrType,
       controllerNumber: index,
       heaterI2cAddress: address,
     },
-    dataLog: {
-      timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
-      startData: {
-        startTime: 0,
-        startTemp: 0,
-        startPos: 0,
-      },
-      atSetpointData: {
-        atSetpointTime: 0,
-        atSetpointTemp: 0,
-        atSetpointPos: 0,
-      },
-      contactDipData: {
-        contactDipTime: 0,
-        contactDipTemp: 0,
-        contactDipPos: 0,
-      },
-      shutoffData: {
-        shutoffTime: 0,
-        shutoffTemp: 0,
-        shutoffPos: 0,
-      },
-      cycleCompleteData: {
-        cycleCompleteTime: 0,
-        cycleCompleteTemp: 0,
-        cycleCompletePos: 0,
-      },
-    },
+    dataLog: {},
   };
-  return heaterTemplate;
-};
 
+  heaterDataTypes.forEach((item) => {
+    heaterData.dataLog[item] = new HeaterReading(0, 0, 0);
+  });
+
+  return heaterData;
+
+}
+
+// Populates Database with blank datalog
+function populateDatabase(database) {
+  async.series(
+    [
+      (cb) => {
+        i2c1.scan((err, dev) => {
+          if (!err) {
+            childAddresses = dev;
+          }
+          cb(err);
+        });
+      },
+      (cb) => {
+        const broadcastBuff = Buffer.alloc(1, 1);
+        i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff, (err, bytesWritten, buffer) => {
+
+          if (err) {
+            return cb(err);
+          } else if (bytesWritten !== broadcastBuff.byteLength) {
+            return cb(new Error('i2cWrite failed - bytesWritten !== broadcastBuff.byteLength'));
+          }
+
+          return cb();
+
+        });
+      },
+      (cb) => {
+        async.eachOfSeries(childAddresses, (item, key, callback) => {
+          const receivedBuff = Buffer.alloc(4);
+          let heaterTypes;
+          i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff, (err, bytesRead, buffer) => {
+
+            if (err) {
+              return callback(err);
+            } else if (bytesRead !== receivedBuff.byteLength) {
+              return callback(new Error('i2cRead failed  - bytesWritten !== broadcastBuff.byteLength'));
+            }
+
+            heaterTypes = receivedBuff.toString();
+            console.log(`5 msg received: ${heaterTypes}`);
+            return callback();
+            /*
+        db.collection('Heater_Database').insertMany([
+          templateGet(key, 1, heaterTypes[0], childAddresses[key]),
+          templateGet(key, 2, heaterTypes[1], childAddresses[key]),
+          templateGet(key, 3, heaterTypes[2], childAddresses[key]),
+          templateGet(key, 4, heaterTypes[3], childAddresses[key]),
+        ]);
+        */
+          });
+        }, (err) => {
+          return cb(err);
+        });
+      },
+    ],
+    (err) => {
+      if (err) {
+        throw err;
+      }
+      console.log('2 setup done');
+      systemInitialized = true;
+    },
+  );
+}
 
 // Setup Promise Function
 function setupLoop() {
@@ -245,87 +332,29 @@ function setupLoop() {
       //console.log('2 successfully connected to database');
       db = database;
       populateDatabase(db);
-    })
+    });
   });
-}
-
-// Populates Database with blank datalog
-function populateDatabase(database) {
-  const broadcastBuff = Buffer.alloc(1, 1);
-  async.series([
-    (cb) => {
-      i2c1.scan((err, dev) => {
-        if (err) throw err;
-        childAddresses = dev;
-        //console.log('3 devices scanned: ' + childAddresses);
-        cb(err);
-      })
-    },
-    (cb) => {
-      i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
-        (err, bytesWritten, buffer) => {
-        expect(bytesWritten).to.equal(broadcastBuff.byteLength);
-        if (err) throw err;
-        //console.log('4 msg written');
-        cb(err);
-      })
-    },
-    (cb) => {
-      async.eachOfSeries(childAddresses, (item, key, cb) => {
-        let receivedBuff = Buffer.alloc(4);
-        let heaterTypes;
-        i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
-          (err, bytesRead, receivedBuff) => {
-          if (err) throw err;
-          expect(bytesRead).to.equal(receivedBuff.byteLength);
-          heaterTypes = receivedBuff.toString();
-          //console.log('5 msg received: ' + heaterTypes);
-          /*
-          db.collection('Heater_Database').insertMany([
-            templateGet(key, 1, heaterTypes[0], childAddresses[key]),
-            templateGet(key, 2, heaterTypes[1], childAddresses[key]),
-            templateGet(key, 3, heaterTypes[2], childAddresses[key]),
-            templateGet(key, 4, heaterTypes[3], childAddresses[key]),
-          ]);
-          */
-          cb(err);
-        })
-      },
-      (err) => {
-        cb(err);
-      });
-    }
-  ],
-  (err) => {
-    if (err) throw err;
-    console.log('2 setup done');
-    systemInitialized = true;
-  });
-}
-
-// Boilerplate callback
-function cb(err) {
-  if (err) throw (err);
 }
 
 function isSystemInitialized() {
   return systemInitialized;
 }
 function updateValue() {
-  let k = statuses;
+  const k = statuses;
   return k;
 }
 
 module.exports = {
-  setupLoop: setupLoop,
-  broadcastData: broadcastData,
-  readData: readData,
-  processData: processData,
-  updateValue: updateValue,
-  isSystemInitialized: isSystemInitialized,
-  childAddresses: childAddresses,
-  statusBroadcasted: statusBroadcasted,
-  readingFinished: readingFinished,
-  statusProcessed: statusProcessed,
-  statuses: statuses,
+  setupLoop,
+  broadcastData,
+  readData,
+  processData,
+  updateValue,
+  isSystemInitialized,
+  childAddresses,
+  statusBroadcasted,
+  readingFinished,
+  statusProcessed,
+  statuses,
+  getTemplate,
 };

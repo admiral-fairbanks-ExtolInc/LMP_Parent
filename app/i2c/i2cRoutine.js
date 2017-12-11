@@ -155,11 +155,6 @@ i2cTmr.setInterval(() => {
 }, '', '750m');
 // Ends Temp Info Interrupt setup
 
-// Boilerplate callback
-function cb(err) {
-  if (err) throw (err);
-};
-
 module.exports = {
   heatersMapped: heatersMapped,
   logRequestSent: logRequestSent,
