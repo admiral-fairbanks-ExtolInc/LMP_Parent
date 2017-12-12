@@ -7,7 +7,7 @@ module.exports = {
   "rules": {
     "max-len": ["error", 120],
     "padded-blocks":["off"],
-    "no-shadow": ["error", { "allow": ["done", "cb", "resolve", "reject"] }],
+    "no-shadow": ["error", { "allow": ["done", "cb", "resolve", "reject", "err"] }],
     "spaced-comment": ["off"],
     "no-unused-vars": ["warn"],
     "prefer-destructuring": ["off"],
