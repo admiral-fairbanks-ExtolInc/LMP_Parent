@@ -7,12 +7,10 @@ const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
 
 let childAddresses = [5];
-let targetHeater;
 let statusBroadcasted;
 let statusProcessed = false;
 let readingFinished;
 let systemInitialized;
-let heatersMapped;
 let db;
 let i2c1;
 let statuses = [];
@@ -21,34 +19,6 @@ const infoBuffers = new Array([childAddresses.length]);
 const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
 const replyNoDatalog = 3;
-const individualData = {
-  timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
-  startData: {
-    startTime: 0,
-    startTemp: 0,
-    startPos: 0,
-  },
-  atSetpointData: {
-    atSetpointTime: 0,
-    atSetpointTemp: 0,
-    atSetpointPos: 0,
-  },
-  contactDipData: {
-    contactDipTime: 0,
-    contactDipTemp: 0,
-    contactDipPos: 0,
-  },
-  shutoffData: {
-    shutoffTime: 0,
-    shutoffTemp: 0,
-    shutoffPos: 0,
-  },
-  cycleCompleteData: {
-    cycleCompleteTime: 0,
-    cycleCompleteTemp: 0,
-    cycleCompletePos: 0,
-  },
-};
 
 // Broadcasts data to all children
 function broadcastData(statusMessageBuffer, cb) {
@@ -79,9 +49,9 @@ function readData(cb) {
   let readLength;
 
   if (!main.dataloggingInfo) {
-    readLength = 3;
+    readLength = replyNoDatalog;
   } else { //update to be based on board heater number
-    readLength = 33;
+    readLength = replyDatalog;
   } // same
 
   async.eachOfSeries(childAddresses, (item, key, cb) => {

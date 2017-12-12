@@ -31,10 +31,18 @@ function drop(done) {
   }
 
   co(function* () {
-    const collections = yield testDB.collections();
+
+    let collections = yield testDB.collections();
     console.log(`Found ${collections.length} collections`);
+    collections = _.filter(collections, c => !_.includes(c.collectionName, 'system'));
+
+    for (let i = 0; i < collections.length; i += 1) {
+      console.log(`Dropping collection ${collections[i].collectionName}`);
+      yield collections[i].drop();
+    }
 
     done();
+
   }).catch((err) => {
     console.error(err.stack);
     done(err);
@@ -55,7 +63,7 @@ function getRandomHeaterData() {
 
   _.keysIn(h.dataLog).forEach((key) => {
     const d = h.dataLog[key];
-    d.time = moment().add(_.random(1, 60), 'seconds');
+    d.time = moment().add(_.random(1, 60), 'seconds').toISOString();
     d.temp = _.random(0, 100);
     d.pos = _.random(1, 25);
   });
@@ -63,17 +71,22 @@ function getRandomHeaterData() {
   return h;
 }
 
-function fixtures(done) {
+function fixtures(count, done) {
 
   co(function* () {
 
     const coll = yield testDB.createCollection('heater_activity');
 
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < count; i += 1) {
       const heaterData = getRandomHeaterData();
-      console.log(util.inspect(heaterData));
+      //console.log(util.inspect(heaterData));
+      const res = yield coll.insertOne(heaterData);
     }
 
+    const collCount = yield coll.count();
+    console.log(`Collection ${coll.collectionName} doc count=${collCount}`);
+
+    done();
 
   }).catch((err) => {
     console.error(err.stack);
@@ -82,15 +95,25 @@ function fixtures(done) {
 
 }
 
-// tests
 
+module.exports = {
+  connect,
+  fixtures,
+  drop
+};
+
+
+// example
+
+/*
 connect((err) => {
-  fixtures((err) => {
+  console.log('connected to mongodb');
+  fixtures(1000, (err) => {
+    console.log('fixtures created');
     drop((err) => {
+      console.log('dropped fixtures');
       testDB.close();
     });
   });
 });
-
-exports.connect = connect;
-exports.drop = drop;
+*/

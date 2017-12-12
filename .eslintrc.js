@@ -13,6 +13,7 @@ module.exports = {
     "prefer-destructuring": ["off"],
     "no-console": ["off"],
     "callback-return": ["error"],
-    "arrow-body-style": ["off"]
+    "arrow-body-style": ["off"],
+    "comma-dangle": ["off"]
   }
 };
