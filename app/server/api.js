@@ -4,10 +4,23 @@ const i2c = require('../i2c/i2cRoutine.js');
 const express = require('express');
 const moment = require('moment');
 const bodyParser = require('body-parser');
+const NanoTimer = require('nanotimer');
 const exec = require('child_process').exec;
 const app = express();
+const Gpio = require('onoff').Gpio;
+const i2cTmr = new NanoTimer();
+const startSigPin = new Gpio(5, 'in', 'both');
+const stopSigPin = new Gpio(6, 'in', 'both');
+const fullStrokePin = new Gpio(13, 'in', 'both');
 let count = 0;
 let childStatuses;
+
+i2cTmr.setInterval(i2c.i2cIntervalTask, '', '750m');
+
+startSigPin.watch(i2c.startSigPinWatch);
+stopSigPin.watch(i2c.stopSigPinWatch);
+fullStrokePin.watch(i2c.FSSigPinWatch);
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(function(req, res, next) {
@@ -27,8 +40,9 @@ if (process.env.NODE_ENV === "production") {
 app.get('/server/tempInfo', (req, res) => {
   childStatuses = i2c.getChildInfo();
   let packet = {
-    temp: childStatuses[0].lmpTemps
+    temp: childStatuses[0].lmpTemps[0]
   };
+  console.log(childStatuses[0].lmpTemps[0]);
   res.json(packet);
 });
 

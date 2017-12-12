@@ -5,8 +5,7 @@
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
     "server": "node ./app/server/api.js",
-    "client": "node start-client.js",
-    "i2c": "node ./app/i2c/i2cRoutine.js"
+    "client": "node start-client.js"
   },
   "repository": {
     "type": "git",
@@ -49,7 +48,7 @@
     "popper.js": "^1.12.7",
     "react": "^16.1.1",
     "react-dom": "^16.1.1",
-    "react-easy-chart": "^0.3.0",
+    "react-easy-chart": "^1.0.0",
     "react-faux-dom": "^4.1.0",
     "react-scrollspy": "^3.3.4",
     "rpi-gpio": "^0.9.1",

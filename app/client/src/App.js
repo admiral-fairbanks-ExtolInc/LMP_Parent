@@ -106,12 +106,12 @@ class App extends Component {
     const xs = [];
 
     let date = moment('2015-1-1 00:00', 'YYYY-MM-DD HH:mm');
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= 301; i++) {
       xs.push(date.format('D-MMM-YY HH:mm'));
       date = date.add(1, 'hour');
     }
     xs.forEach((x) => {
-      data.push({ x, y: 51 });
+      data.push({ x, y: 301 });
     });
     return data;
   }
@@ -216,9 +216,10 @@ class App extends Component {
                   data={this.data}
                   datePattern={'%d-%b-%y %H:%M'}
                   xType={'time'}
+                  xTicks={50}
                   width={this.state.componentWidth}
                   height={this.state.componentWidth / 2}
-                  yDomainRange={[0, 1000]}
+                  yDomainRange={[0, 700]}
                   axisLabels={{ x: 'Hour', y: 'Percentage' }}
                   axes
                   grid

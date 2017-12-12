@@ -6,6 +6,7 @@
   "dependencies": {
     "axios": "^0.17.0",
     "bootstrap": "^4.0.0-beta",
+    "create-react-app": "^1.4.3",
     "d3": "^3.5.17",
     "d3-array": "^0.8.1",
     "d3-scale": "^0.9.3",
@@ -14,7 +15,7 @@
     "jquery": "^3.2.1",
     "moment": "^2.19.1",
     "popper.js": "^1.12.7",
-    "react": "^16.0.0",
+    "react": "^16.2.0",
     "react-dom": "^16.0.0",
     "react-easy-chart": "^0.3.0",
     "react-faux-dom": "^2.5.0",
