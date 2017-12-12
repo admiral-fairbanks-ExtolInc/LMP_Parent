@@ -19,7 +19,7 @@ i2cTmr.setInterval(i2c.i2cIntervalTask, '', '750m');
 
 startSigPin.watch(i2c.startSigPinWatch);
 stopSigPin.watch(i2c.stopSigPinWatch);
-fullStrokePin.watch(i2c.FSSigPinWatch);
+fullStrokePin.watch(i2c.fsSigPinWatch);
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());

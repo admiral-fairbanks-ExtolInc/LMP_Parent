@@ -1,53 +1,45 @@
-'use strict';
-const Data = require('./gather-data');
-const util = require('util');
-const Promise = require('bluebird');
-const express = require('express');
+const data = require('./gather-data');
 const Gpio = require('onoff').Gpio;
-const NanoTimer = require('nanotimer');
 const async = require('async');
-const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
 
 const digIn = [5, 6, 13];
 const digOut = [16, 19, 20, 26];
 const startSigIn = {
-  Value: 0,
-  Pin: digIn[0],
-  Type: 'digIn',
+  value: 0,
+  pin: digIn[0],
+  type: 'digIn',
 };
 const stopSigIn = {
-  Value: 0,
-  Pin: digIn[1],
-  Type: 'digIn',
+  value: 0,
+  pin: digIn[1],
+  type: 'digIn',
 };
 const fullStrokeSigIn = {
-  Value: 0,
-  Pin: digIn[2],
-  Type: 'digIn',
+  value: 0,
+  pin: digIn[2],
+  type: 'digIn',
 };
 const extendPressOut = {
-  Value: 0,
-  Pin: digOut[0],
-  Type: 'digOut',
+  value: 0,
+  pin: digOut[0],
+  type: 'digOut',
 };
 const coolingAirOut = {
-  Value: 0,
-  Pin: digOut[1],
-  Type: 'digOut',
+  value: 0,
+  pin: digOut[1],
+  type: 'digOut',
 };
 const cycleCompleteOut = {
-  Value: 0,
-  Pin: digOut[2],
-  Type: 'digOut',
+  value: 0,
+  pin: digOut[2],
+  type: 'digOut',
 };
 const lmpFltedOut = {
-  Value: 0,
-  Pin: digOut[3],
-  Type: 'digOut',
+  value: 0,
+  pin: digOut[3],
+  type: 'digOut',
 };
-const url = 'mongodb://localhost:27017/mydb';
-const i2cTmr = new NanoTimer();
-const app = express();
+
 // IO Configuration
 const extendPressPin = new Gpio(16, 'out');
 const coolingAirPin = new Gpio(19, 'out');
@@ -57,7 +49,6 @@ const lmpFltedPin = new Gpio(26, 'out');
 // End IO Config
 
 let dataloggingInfo = false;
-let dbCreated;
 let readingAndLoggingActive;
 let childStatuses = [];
 let logRequestSent;
@@ -67,57 +58,70 @@ let systemInitialized;
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 function i2cHandling() {
   async.series([
-  (cb) => {
-    // Broadcast out Status
-    let status = [startSigIn.Value, stopSigIn.Value,
-      fullStrokeSigIn.Value, dataloggingInfo];
-    Data.broadcastData(Buffer.from(status), cb);
-  },
-  (cb) => {
-    // Then, read data from each child controller
-    Data.readData(cb);
-  },
-  (cb) => {
-    // Then, process the data obtained from the children
-    // storing any datalogging info
-    Data.processData([startSigIn.Value, stopSigIn.Value,
-      fullStrokeSigIn.Value, dataloggingInfo], cb);
-  },
-  (cb) => {
-    // Set this flag false once complete so it can begin again on next interrupt
-    readingAndLoggingActive = false;
+    (cb) => {
+      // Broadcast out Status
+      const status = [startSigIn.value, stopSigIn.value,
+        fullStrokeSigIn.value, dataloggingInfo];
+      data.broadcastData(Buffer.from(status), cb);
+    },
+    (cb) => {
+      // Then, read data from each child controller
+      data.readData(cb);
+    },
+    (cb) => {
+      // Then, process the data obtained from the children
+      // storing any datalogging info
+      data.processData([startSigIn.value, stopSigIn.value,
+        fullStrokeSigIn.value, dataloggingInfo], cb);
+    },
+    (cb) => {
+      // Set this flag false once complete so it can begin again on next interrupt
+      readingAndLoggingActive = false;
 
-    childStatuses = Data.updateValue();
-    // console.log(childStatuses);
-    cb();
-  },
-  (cb) => {
-    // Checks if all modules are at setpoint. If so, Parent needs
-    // to send out Extend Press signal
-    extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
-    // Checks if all modules are at release. If so, Parent needs
-    // to send out Cooling Air signal
-    coolingAirOut.Value = childStatuses.every(elem => elem.heaterAtRelease);
-    // Checks if all Modules are at Cycle Complete. If so,
-    // Parent needs to send out Cycle Complete Signal
-    cycleCompleteOut.Value = childStatuses.every(elem => elem.heaterCycleComplete);
-    if (cycleCompleteOut.Value && !logRequestSent) dataloggingInfo = true;
-    else if (!cycleCompleteOut.Value && logRequestSent) {
-      logRequestSent = false;
-    }
-    // Checks to see if any modules are faulted. If so, Parent
-    // needs to send out LMP Faulted signal
-    lmpFltedOut.Value = childStatuses.some(elem => elem.heaterFaulted);
-    extendPressPin.write(extendPressOut.Value, (err) => {
-      if (err) throw err;});
-    coolingAirPin.write(coolingAirOut.Value, (err) => {
-      if (err) throw err;});
-    cycleCompletePin.write(cycleCompleteOut.Value, (err) => {
-      if (err) throw err;});
-    lmpFltedPin.write(lmpFltedOut.Value, (err) => {
-      if (err) throw err;});
-    cb();
-  }]);
+      childStatuses = data.updateValue();
+      // console.log(childStatuses);
+      cb();
+    },
+    (cb) => {
+      // Checks if all modules are at setpoint. If so, Parent needs
+      // to send out Extend Press signal
+      extendPressOut.value = childStatuses.every(elem => elem.heaterAtSetpoint);
+      // Checks if all modules are at release. If so, Parent needs
+      // to send out Cooling Air signal
+      coolingAirOut.value = childStatuses.every(elem => elem.heaterAtRelease);
+      // Checks if all Modules are at Cycle Complete. If so,
+      // Parent needs to send out Cycle Complete Signal
+      cycleCompleteOut.value = childStatuses.every(elem => elem.heaterCycleComplete);
+      if (cycleCompleteOut.value && !logRequestSent) {
+        dataloggingInfo = true;
+      } else if (!cycleCompleteOut.value && logRequestSent) {
+        logRequestSent = false;
+      }
+      // Checks to see if any modules are faulted. If so, Parent
+      // needs to send out LMP Faulted signal
+      lmpFltedOut.value = childStatuses.some(elem => elem.heaterFaulted);
+      extendPressPin.write(extendPressOut.value, (err) => {
+        if (err) {
+          throw err;
+        }
+      });
+      coolingAirPin.write(coolingAirOut.value, (err) => {
+        if (err) {
+          throw err;
+        }
+      });
+      cycleCompletePin.write(cycleCompleteOut.value, (err) => {
+        if (err) {
+          throw err;
+        }
+      });
+      lmpFltedPin.write(lmpFltedOut.value, (err) => {
+        if (err) {
+          throw err;
+        }
+      });
+      cb();
+    }]);
 }
 
 function getChildInfo() {
@@ -126,45 +130,61 @@ function getChildInfo() {
 
 // Watch Input Pins, Update value accordingly
 function startSigPinWatch(err, value) {
-  if (err) throw err;
-  if (value) startSigIn.Value = 0;
-  else startSigIn.Value = 1;
-  console.log('start sig:' + startSigIn.Value);
+  if (err) {
+    throw err;
+  }
+  if (value) {
+    startSigIn.value = 0;
+  } else {
+    startSigIn.value = 1;
+  }
+  console.log(`start sig: ${startSigIn.value}`);
 }
 
 function stopSigPinWatch(err, value) {
-  if (err) throw err;
-  if (value) stopSigIn.Value = 0;
-  else stopSigIn.Value = 1;
-  console.log('stop sig:' + stopSigIn.Value);
+  if (err) {
+    throw err;
+  }
+  if (value) {
+    stopSigIn.value = 0;
+  } else {
+    stopSigIn.value = 1;
+  }
+  console.log(`stop sig: ${stopSigIn.value}`);
 }
 
-function FSSigPinWatch(err, value) {
-  if (err) throw err;
-  if (value) fullStrokeSigIn.Value = 0;
-  else fullStrokeSigIn.Value = 1;
-  console.log('full stroke sig:' + fullStrokeSigIn.Value);
+function fsSigPinWatch(err, value) {
+  if (err) {
+    throw err;
+  }
+  if (value) {
+    fullStrokeSigIn.value = 0;
+  } else {
+    fullStrokeSigIn.value = 1;
+  }
+  console.log(`full stroke sig: ${fullStrokeSigIn.value}`);
 }
+
 // End Watch Input Pins
 
 function i2cIntervalTask() {
-  systemInitialized = Data.isSystemInitialized()
+  systemInitialized = data.isSystemInitialized()
 
   if (!readingAndLoggingActive && systemInitialized) {
     readingAndLoggingActive = true;
     i2cHandling();
   }
   else if (!systemInitialized) {
-    Data.setupLoop();
+    data.setupLoop();
   }
 }
 
 module.exports = {
-  heatersMapped: heatersMapped,
-  logRequestSent: logRequestSent,
-  getChildInfo: getChildInfo,
-  i2cIntervalTask: i2cIntervalTask,
-  startSigPinWatch: startSigPinWatch,
-  stopSigPinWatch: stopSigPinWatch,
-  FSSigPinWatch, FSSigPinWatch,
+  heatersMapped,
+  logRequestSent,
+  getChildInfo,
+  i2cIntervalTask,
+  startSigPinWatch,
+  stopSigPinWatch,
+  fsSigPinWatch,
 };
