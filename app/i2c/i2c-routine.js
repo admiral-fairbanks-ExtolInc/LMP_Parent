@@ -168,13 +168,12 @@ function fsSigPinWatch(err, value) {
 // End Watch Input Pins
 
 function i2cIntervalTask() {
-  systemInitialized = data.isSystemInitialized()
+  systemInitialized = data.isSystemInitialized();
 
   if (!readingAndLoggingActive && systemInitialized) {
     readingAndLoggingActive = true;
     i2cHandling();
-  }
-  else if (!systemInitialized) {
+  } else if (!systemInitialized) {
     data.setupLoop();
   }
 }

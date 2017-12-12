@@ -120,8 +120,6 @@ function readData(cb) {
 // Processes data from all children. Includes datalogging to Mongodb
 function processData(IOstatus, cb) {
   const data = infoBuffers;
-  let datalogIndex;
-  const statusMessageBuffer = IOstatus;
   const overallStatus = new Array(data.length);
   const heaterStatus = {
     lmpTemps: [],
