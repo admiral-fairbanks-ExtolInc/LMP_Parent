@@ -1,6 +1,6 @@
 'use strict';
 
-const i2c = require('../i2c/i2cRoutine.js');
+const i2c = require('../i2c/i2c-routine.js');
 const express = require('express');
 const moment = require('moment');
 const bodyParser = require('body-parser');

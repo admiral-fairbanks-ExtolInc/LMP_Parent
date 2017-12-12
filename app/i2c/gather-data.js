@@ -1,7 +1,7 @@
 
 const async = require('async');
 const moment = require('moment');
-const main = require('./i2cRoutine');
+const main = require('./i2c-routine');
 const i2c = require('i2c-bus');
 const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
