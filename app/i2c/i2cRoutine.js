@@ -9,7 +9,7 @@ const async = require('async');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
 
 const digIn = [5, 6, 13];
-const digOut = [16, 19, 20, 26];
+const digOut = [16, 17, 20, 26];
 const startSigIn = {
   Value: 0,
   Pin: digIn[0],
@@ -62,7 +62,8 @@ let readingAndLoggingActive;
 let childStatuses = [];
 let logRequestSent;
 let heatersMapped;
-let systemInitialized;
+let systemInitialized = false;
+let systemInitInProgress = false;
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 function i2cHandling() {
@@ -88,7 +89,6 @@ function i2cHandling() {
     readingAndLoggingActive = false;
 
     childStatuses = Data.updateValue();
-    // console.log(childStatuses);
     cb();
   },
   (cb) => {
@@ -97,7 +97,10 @@ function i2cHandling() {
     extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
     // Checks if all modules are at release. If so, Parent needs
     // to send out Cooling Air signal
-    coolingAirOut.Value = childStatuses.every(elem => elem.heaterAtRelease);
+    if (childStatuses.every(elem => elem.heaterAtSetpoint) && fullStrokeSigIn.Value) {
+      coolingAirOut.Value = 1;
+    }
+    else coolingAirOut.Value = 0;
     // Checks if all Modules are at Cycle Complete. If so,
     // Parent needs to send out Cycle Complete Signal
     cycleCompleteOut.Value = childStatuses.every(elem => elem.heaterCycleComplete);
@@ -111,7 +114,8 @@ function i2cHandling() {
     extendPressPin.write(extendPressOut.Value, (err) => {
       if (err) throw err;});
     coolingAirPin.write(coolingAirOut.Value, (err) => {
-      if (err) throw err;});
+      if (err) throw err;
+    });
     cycleCompletePin.write(cycleCompleteOut.Value, (err) => {
       if (err) throw err;});
     lmpFltedPin.write(lmpFltedOut.Value, (err) => {
@@ -127,34 +131,32 @@ function getChildInfo() {
 // Watch Input Pins, Update value accordingly
 function startSigPinWatch(err, value) {
   if (err) throw err;
-  if (value) startSigIn.Value = 0;
-  else startSigIn.Value = 1;
-  console.log('start sig:' + startSigIn.Value);
+  if (value) startSigIn.Value = 1;
+  else startSigIn.Value = 0;
 }
 
 function stopSigPinWatch(err, value) {
   if (err) throw err;
-  if (value) stopSigIn.Value = 0;
-  else stopSigIn.Value = 1;
-  console.log('stop sig:' + stopSigIn.Value);
+  if (value) stopSigIn.Value = 1;
+  else stopSigIn.Value = 0;
 }
 
 function FSSigPinWatch(err, value) {
   if (err) throw err;
-  if (value) fullStrokeSigIn.Value = 0;
-  else fullStrokeSigIn.Value = 1;
-  console.log('full stroke sig:' + fullStrokeSigIn.Value);
+  if (value) fullStrokeSigIn.Value = 1;
+  else fullStrokeSigIn.Value = 0;
 }
 // End Watch Input Pins
 
 function i2cIntervalTask() {
-  systemInitialized = Data.isSystemInitialized()
+  systemInitialized = Data.isSystemInitialized();
+  systemInitInProgress = Data.isSystemInitInProgress();
+  readingAndLoggingActive = Data.RALA();
 
-  if (!readingAndLoggingActive && systemInitialized) {
-    readingAndLoggingActive = true;
+  if (!readingAndLoggingActive && systemInitialized && !systemInitInProgress) {
     i2cHandling();
   }
-  else if (!systemInitialized) {
+  else if (!systemInitialized && !systemInitInProgress) {
     Data.setupLoop();
   }
 }

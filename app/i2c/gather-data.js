@@ -12,12 +12,15 @@ const expect = chai.expect;
 const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
 
-let childAddresses = [5];
+let childAddresses = [];
 let targetHeater;
 let statusBroadcasted;
 let statusProcessed = false;
 let readingFinished;
-let systemInitialized;
+let systemInitialized = false;
+let populatingDatabase = false;
+let readingAndLoggingActive = false;
+let i2cScanned = false;
 let heatersMapped;
 let db;
 let i2c1;
@@ -58,11 +61,10 @@ const individualData = {
 
 // Broadcasts data to all children
 function broadcastData(statusMessageBuffer, cb) {
+  readingAndLoggingActive = true;
   i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
     (err, bytesRead, buffer) => {
     if (err) throw err;
-    if (statusMessageBuffer[3]) main.logRequestSent = true; // won't work. needs to be refactored.
-    
     cb();
   });
 };
@@ -179,6 +181,7 @@ function processData(IOstatus, cb) {
       if (datalogIndex >= data.length) {
         datalogIndex = 0;
         statusProcessed = false;
+        readingAndLoggingActive = false;
         cb();
         return;
       }
@@ -232,6 +235,7 @@ function templateGet(index, htrNum, htrType, address) {
 
 // Setup Promise Function
 function setupLoop() {
+  populatingDatabase = true;
   i2c1 = i2c.open(1, (err) => {
     // Setup Loop
     MongoClient.connect(url, (err, database) => {
@@ -248,16 +252,22 @@ function populateDatabase(database) {
     (cb) => {
       i2c1.scan((err, dev) => {
         if (err) throw err;
-        childAddresses = dev;
-        //console.log('3 devices scanned: ' + childAddresses);
-        cb(err);
+        dev.forEach((elem, ind, arr) => {
+          if (elem < 35) {
+            childAddresses.push(elem);
+          }
+          if (ind === arr.length - 1) {
+            console.log('3 devices scanned: ' + childAddresses);
+            i2cScanned = true;
+            cb(err);
+          }
+        })
       })
     },
     (cb) => {
       i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
         (err, bytesWritten, buffer) => {
         if (err) throw err;
-        //console.log('4 msg written');
         cb(err);
       })
     },
@@ -288,8 +298,9 @@ function populateDatabase(database) {
   ],
   (err) => {
     if (err) throw err;
-    console.log('2 setup done');
     systemInitialized = true;
+    populatingDatabase = false;
+    console.log("setup done")
   });
 }
 
@@ -301,9 +312,18 @@ function cb(err) {
 function isSystemInitialized() {
   return systemInitialized;
 }
+
+function isSystemInitInProgress() {
+  return populatingDatabase;
+}
+
 function updateValue() {
   let k = statuses;
   return k;
+}
+
+function RALA() {
+  return readingAndLoggingActive;
 }
 
 module.exports = {
@@ -313,6 +333,8 @@ module.exports = {
   processData: processData,
   updateValue: updateValue,
   isSystemInitialized: isSystemInitialized,
+  isSystemInitInProgress: isSystemInitInProgress,
+  RALA: RALA,
   childAddresses: childAddresses,
   statusBroadcasted: statusBroadcasted,
   readingFinished: readingFinished,

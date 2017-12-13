@@ -42,7 +42,6 @@ app.get('/server/tempInfo', (req, res) => {
   let packet = {
     temp: childStatuses[0].lmpTemps[0]
   };
-  console.log(childStatuses[0].lmpTemps[0]);
   res.json(packet);
 });
 
