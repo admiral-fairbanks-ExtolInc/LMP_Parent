@@ -63,11 +63,12 @@ const individualData = {
 // Broadcasts data to all children
 function broadcastData(statusMessageBuffer, cb) {
   readingAndLoggingActive = true;
-  i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
+  async.retry({times: 5, interval: 5},
+    i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
     (err, bytesRead, buffer) => {
     if (err) throw err;
     cb();
-  });
+  }));
 };
 
 // Reads data obtained from all children
@@ -80,13 +81,13 @@ function readData(status, cb) {
   else readLength = 7; // same
   let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb) => {
-    i2c1.i2cRead(item, readLength, tempBuff,
+    async.retry({times: 5, interval: 5}, i2c1.i2cRead(item, readLength, tempBuff,
       (err, bytesRead, buffer) => {
       if (err) throw err;
       tempBuff = buffer;
       data[key] = tempBuff;
       cb(err);
-    })
+    }));
   },
   (err) => {
     if (err) throw err;
