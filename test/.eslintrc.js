@@ -1,0 +1,6 @@
+module.exports = {
+  "rules": {
+    "prefer-arrow-callback": ["off"],
+    "no-unused-expressions": ["off"]
+  }
+}

@@ -14,6 +14,7 @@ module.exports = {
     "no-console": ["off"],
     "callback-return": ["error"],
     "arrow-body-style": ["off"],
-    "comma-dangle": ["off"]
+    "comma-dangle": ["off"],
+    "consistent-return": ["error", { "treatUndefinedAsUnspecified": true }]
   }
 };

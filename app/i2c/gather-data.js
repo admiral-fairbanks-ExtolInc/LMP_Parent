@@ -5,16 +5,14 @@ const main = require('./i2c-routine');
 const i2c = require('i2c-bus');
 const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
+const _ = require('lodash');
 
 let childAddresses = [5];
 let statusBroadcasted;
-let statusProcessed = false;
 let readingFinished;
 let systemInitialized;
 let db;
 let i2c1;
-let statuses = [];
-const infoBuffers = new Array([childAddresses.length]);
 
 const url = 'mongodb://localhost:27017/mydb';
 const replyDatalog = 33;
@@ -22,6 +20,11 @@ const replyNoDatalog = 3;
 
 // Broadcasts data to all children
 function broadcastData(statusMessageBuffer, cb) {
+
+  if (!_.isArrayLike(statusMessageBuffer) || !_.isFunction(cb)) {
+    throw new Error('broadcastData called with invalid args');
+  }
+
   i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer, (err, bytesWritten, buffer) => {
 
     if (err) {
@@ -41,10 +44,17 @@ function broadcastData(statusMessageBuffer, cb) {
     return cb();
 
   });
+
 }
 
 // Reads data obtained from all children
 function readData(cb) {
+
+  if (!_.isFunction(cb)) {
+    throw new Error('readData called with invalid args');
+  }
+
+  const slaveData = [];
 
   let readLength;
 
@@ -56,9 +66,9 @@ function readData(cb) {
 
   async.eachOfSeries(childAddresses, (item, key, cb) => {
 
-    const tempBuff = Buffer.alloc(readLength);
+    const readBuff = Buffer.alloc(readLength);
 
-    i2c1.i2cRead(item, readLength, tempBuff, (err, bytesRead, buffer) => {
+    i2c1.i2cRead(item, readLength, readBuff, (err, bytesRead, buffer) => {
 
       if (err) {
         return cb(err);
@@ -68,7 +78,7 @@ function readData(cb) {
         return cb(new Error('i2cRead failed - bytesRead !== readLength'));
       }
 
-      infoBuffers[key] = buffer;
+      slaveData[key] = buffer;
 
       return cb();
 
@@ -82,16 +92,13 @@ function readData(cb) {
       console.log('4 finished reading successfully');
     }
 
-    return cb(err);
+    return cb(err, slaveData);
 
   });
 }
 
-// Processes data from all children. Includes datalogging to Mongodb
-function processData(IOstatus, cb) {
-  const data = infoBuffers;
-  const overallStatus = new Array(data.length);
-  const heaterStatus = {
+function getInitialHeaterStatus() {
+  return {
     lmpTemps: [],
     heaterCycleRunning: false,
     heaterAtSetpoint: false,
@@ -100,94 +107,44 @@ function processData(IOstatus, cb) {
     heaterFaulted: false,
     cycleDatalogged: false,
   };
+}
 
-  if (!statusProcessed) {
-    for (let i = 0, l = data.length; i < l; i += 1) {
-      const statusByte = data[i].readInt8(0);
-      /* eslint-disable no-bitwise */
-      if ((statusByte & 1) === 1) { heaterStatus.heaterCycleRunning = true; }
-      if ((statusByte & 2) === 2) { heaterStatus.heaterAtSetpoint = true; }
-      if ((statusByte & 4) === 4) { heaterStatus.heaterAtRelease = true; }
-      if ((statusByte & 8) === 8) { heaterStatus.heaterCycleComplete = true; }
-      if ((statusByte & 16) === 16) { heaterStatus.heaterFaulted = true; }
-      if ((statusByte & 32) === 32) { heaterStatus.cycleDatalogged = true; }
-      /* eslint-enable no-bitwise */
-      for (let j = 0; j < 4; j += 4) {
-        heaterStatus.lmpTemps[j] = data[i].readInt16BE(1) / 10;
-      }
+// Processes data from all children. Includes datalogging to Mongodb
+function processData(slaveData, cb) {
 
-      overallStatus[i] = heaterStatus;
+  if (!_.isArray(slaveData) || !_.isFunction(cb)) {
+    throw new Error('processData called with invalid args');
+  }
+
+  const statusValues = [];
+
+  for (let i = 0, l = slaveData.length; i < l; i += 1) {
+
+    const heaterStatus = getInitialHeaterStatus();
+    const statusByte = slaveData[i].readInt8(0);
+
+    /* eslint-disable no-bitwise */
+    if ((statusByte & 1) === 1) { heaterStatus.heaterCycleRunning = true; }
+    if ((statusByte & 2) === 2) { heaterStatus.heaterAtSetpoint = true; }
+    if ((statusByte & 4) === 4) { heaterStatus.heaterAtRelease = true; }
+    if ((statusByte & 8) === 8) { heaterStatus.heaterCycleComplete = true; }
+    if ((statusByte & 16) === 16) { heaterStatus.heaterFaulted = true; }
+    if ((statusByte & 32) === 32) { heaterStatus.cycleDatalogged = true; }
+    /* eslint-enable no-bitwise */
+
+    for (let j = 0; j < 4; j += 4) {
+      heaterStatus.lmpTemps[j] = slaveData[i].readInt16BE(1) / 10;
     }
-    statusProcessed = true;
-    statuses = overallStatus;
-    statusProcessed = false;
-    console.log('5 data processing done');
+
+    statusValues[i] = heaterStatus;
+    console.log(`statuses[${i}]=${heaterStatus}`);
+
   }
 
-  return cb();
+  console.log('5 data processing done');
 
-  /*
-  if (statusMessageBuffer[3]) {
-  const k = 30 * targetHeater;
-    individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
-    individualData.startData.startTime = data[datalogIndex]
-      .readInt16BE(9 + k) / 100;
-    individualData.startData.startTemp = data[datalogIndex]
-      .readInt16BE(11 + k) / 10;
-    individualData.startData.startPos = data[datalogIndex]
-      .readInt16BE(13 + k) / 100;
-    individualData.atSetpointData.atSetpointTime = data[datalogIndex]
-      .readInt16BE(15 + k) / 100;
-    individualData.atSetpointData.atSetpointTemp = data[datalogIndex]
-      .readInt16BE(17 + k) / 10;
-    individualData.atSetpointData.atSetpointPos = data[datalogIndex]
-      .readInt16BE(19 + k) / 100;
-    individualData.contactDipData.contactDipTime = data[datalogIndex]
-      .readInt16BE(21 + k) / 100;
-    individualData.contactDipData.contactDipTemp = data[datalogIndex]
-      .readInt16BE(23 + k) / 10;
-    individualData.contactDipData.contactDipPos = data[datalogIndex]
-      .readInt16BE(25 + k) / 100;
-    individualData.shutoffData.shutoffTime = data[datalogIndex]
-      .readInt16BE(27 + k) / 100;
-    individualData.shutoffData.shutoffTemp = data[datalogIndex]
-      .readInt16BE(29 + k) / 10;
-    individualData.shutoffData.shutoffPos = data[datalogIndex]
-      .readInt16BE(31 + k) / 100;
-    individualData.cycleCompleteData.cycleCompleteTime = data[datalogIndex]
-      .readInt16BE(33 + k) / 100;
-    individualData.cycleCompleteData.cycleCompleteTemp = data[datalogIndex]
-      .readInt16BE(35 + k) / 10;
-    individualData.cycleCompleteData.cycleCompletePos = data[datalogIndex]
-      .readInt16BE(37 + k) / 100;
-    db.collection('Heater_Database').update(
-      {
-        heaterId: {
-          heaterNumber: 1 + datalogIndex + targetHeater,
-        },
-      },
-      {
-        $push: { dataLog: individualData },
-      }
-    ).then((err) => {
-      if (err) throw (err);
-      if (err) throw (err);
-      targetHeater += 1;
-      if (targetHeater >= 4) {
-        targetHeater = 0;
-        datalogIndex += 1;
-      }
-      if (datalogIndex >= data.length) {
-        datalogIndex = 0;
-        statusProcessed = false;
-        console.log('8 data processing done');
-        cb();
-        return;
-      }
-    }).then(processData())
-      .catch((err) => {throw (err);});
-  }
-  */
+  return cb(null, statusValues);
+
 }
 
 /**
@@ -307,9 +264,8 @@ function setupLoop() {
 function isSystemInitialized() {
   return systemInitialized;
 }
-function updateValue() {
-  const k = statuses;
-  return k;
+function getStatus() {
+  return statuses;
 }
 
 module.exports = {
@@ -317,12 +273,11 @@ module.exports = {
   broadcastData,
   readData,
   processData,
-  updateValue,
+  getStatus,
   isSystemInitialized,
   childAddresses,
   statusBroadcasted,
   readingFinished,
-  statusProcessed,
-  statuses,
   getTemplate,
+  getInitialHeaterStatus,
 };

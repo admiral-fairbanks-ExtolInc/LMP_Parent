@@ -1,4 +1,5 @@
 const chai = require('chai');
+
 const expect = chai.expect;
 
 const gpio = require('rpi-gpio');
@@ -45,13 +46,13 @@ function togglePin(p, v) {
 }
 
 describe('gpio-promise', function () {
-  
+
   this.timeout(0);
-  
+
   let toggleCount = 0;
-  
+
   it('should toggle LED on and off', function (done) {
-  
+
     gpioSetup(PIN, gpio.DIR_OUT).then(() => {
       return togglePin(PIN, 1);
     }).then(() => {
@@ -83,7 +84,7 @@ describe('gpio-promise', function () {
     }).catch((err) => {
       done(err);
     });
-    
+
   });
-  
+
 });

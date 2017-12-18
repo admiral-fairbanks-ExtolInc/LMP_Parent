@@ -49,7 +49,7 @@ export default class setpointInput extends React.Component {
         <h4>{title}</h4>
         <InputGroup size='100'>
           <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
-          <Input placeholder={boilerplate} onChange={this.updateValue} type='number' step='10' />
+          <Input placeholder={boilerplate} onChange={this.getStatus} type='number' step='10' />
           <InputGroupAddon>℉</InputGroupAddon>
         </InputGroup>
       </div>
