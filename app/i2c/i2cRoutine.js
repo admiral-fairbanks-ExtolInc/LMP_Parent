@@ -76,19 +76,20 @@ function i2cHandling() {
     // Broadcast out Status
     let status = [startSigIn.Value, stopSigIn.Value,
       fullStrokeSigIn.Value, dataloggingInfo];
-    Data.broadcastData(Buffer.from(status), cb);
+    async.retry({times: 5, interval: 5}, Data.broadcastData(Buffer.from(status), cb));
   },
   (cb) => {
     let status = [startSigIn.Value, stopSigIn.Value,
     fullStrokeSigIn.Value, dataloggingInfo];
     // Then, read data from each child controller
-    Data.readData(status, cb);
+    async.retry({times: 5, interval: 5}, Data.readData(status, cb));
   },
   (cb) => {
     // Then, process the data obtained from the children
     // storing any datalogging info
-    Data.processData([startSigIn.Value, stopSigIn.Value,
-      fullStrokeSigIn.Value, dataloggingInfo], cb);
+    let status = [startSigIn.Value, stopSigIn.Value,
+    fullStrokeSigIn.Value, dataloggingInfo];
+    async.retry({times: 5, interval: 5}, Data.processData(status, cb));
   },
   (cb) => {
     // Set this flag false once complete so it can begin again on next interrupt

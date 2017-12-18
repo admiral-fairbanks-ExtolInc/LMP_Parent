@@ -255,7 +255,7 @@ function populateDatabase(database) {
   const broadcastBuff = Buffer.alloc(1, 1);
   async.series([
     (cb) => {
-      i2c1.scan((err, dev) => {
+      async.retry({times: 5, interval: 5}, i2c1.scan((err, dev) => {
         if (err) throw err;
         dev.forEach((elem, ind, arr) => {
           if (elem < 35) {
@@ -267,20 +267,20 @@ function populateDatabase(database) {
             cb(err);
           }
         })
-      })
+      }));
     },
     (cb) => {
-      i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
+      async.retry({times: 5, interval: 5}, i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
         (err, bytesWritten, buffer) => {
         if (err) throw err;
         cb(err);
-      })
+      }));
     },
     (cb) => {
       async.eachOfSeries(childAddresses, (item, key, cb) => {
         let receivedBuff = Buffer.alloc(4);
         let heaterTypes;
-        i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
+        async.retry({times: 5, interval: 5}, i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
           (err, bytesRead, receivedBuff) => {
           if (err) throw err;
           heaterTypes = receivedBuff.toString();
@@ -294,7 +294,7 @@ function populateDatabase(database) {
           ]);
           */
           cb(err);
-        })
+        }));
       },
       (err) => {
         cb(err);
