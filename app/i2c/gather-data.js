@@ -28,6 +28,7 @@ let statuses = [];
 let infoBuffers = new Array([childAddresses.length]);
 
 const url = 'mongodb://localhost:27017/mydb';
+const numHeaters = 1;
 const replyDatalog = 33;
 const replyNoDatalog = 3;
 const individualData = {
@@ -70,12 +71,13 @@ function broadcastData(statusMessageBuffer, cb) {
 };
 
 // Reads data obtained from all children
-function readData(cb) {
+function readData(status, cb) {
+  let dataloggingInfo = status[3];
   let data = infoBuffers;
   let readLength;
   let targetChild;
-  if (!main.dataloggingInfo) readLength = 3; //update to be based on board heater number
-  else readLength = 33; // same
+  if (!dataloggingInfo) readLength = 3; //update to be based on board heater number
+  else readLength = 7; // same
   let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb) => {
     i2c1.i2cRead(item, readLength, tempBuff,
@@ -103,20 +105,23 @@ function processData(IOstatus, cb) {
     lmpTemps: [],
     heaterCycleRunning: false,
     heaterAtSetpoint: false,
+    coolingAirOn: false,
     heaterAtRelease: false,
     heaterCycleComplete: false,
     heaterFaulted: false,
     cycleDatalogged: false,
   };
+  console.log(data);
   if (!statusProcessed) {
     for (let i = 0, l = data.length; i < l; i += 1) {
       const statusByte = data[i].readInt8(0);
       if ((statusByte & 1) === 1) { heaterStatus.heaterCycleRunning = true; }
       if ((statusByte & 2) === 2) { heaterStatus.heaterAtSetpoint = true; }
-      if ((statusByte & 4) === 4) { heaterStatus.heaterAtRelease = true; }
-      if ((statusByte & 8) === 8) { heaterStatus.heaterCycleComplete = true; }
-      if ((statusByte & 16) === 16) { heaterStatus.heaterFaulted = true; }
-      if ((statusByte & 32) === 32) { heaterStatus.cycleDatalogged = true; }
+      if ((statusByte & 4) === 4) { heaterStatus.coolingAirOn = true; }
+      if ((statusByte & 8) === 8) { heaterStatus.heaterAtRelease = true; }
+      if ((statusByte & 16) === 16) { heaterStatus.heaterCycleComplete = true; }
+      if ((statusByte & 32) === 32) { heaterStatus.heaterFaulted = true; }
+      if ((statusByte & 64) === 64) { heaterStatus.cycleDatalogged = true; }
       for (let j = 0; j < 4; j += 4) {
         heaterStatus.lmpTemps[j] = data[i].readInt16BE(1) / 10;
       }

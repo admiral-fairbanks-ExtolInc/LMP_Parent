@@ -65,6 +65,10 @@ let heatersMapped;
 let systemInitialized = false;
 let systemInitInProgress = false;
 
+function readyForLogging() {
+  return dataloggingInfo
+}
+
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 function i2cHandling() {
   async.series([
@@ -75,8 +79,10 @@ function i2cHandling() {
     Data.broadcastData(Buffer.from(status), cb);
   },
   (cb) => {
+    let status = [startSigIn.Value, stopSigIn.Value,
+    fullStrokeSigIn.Value, dataloggingInfo];
     // Then, read data from each child controller
-    Data.readData(cb);
+    Data.readData(status, cb);
   },
   (cb) => {
     // Then, process the data obtained from the children
@@ -97,7 +103,7 @@ function i2cHandling() {
     extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
     // Checks if all modules are at release. If so, Parent needs
     // to send out Cooling Air signal
-    if (childStatuses.every(elem => elem.heaterAtSetpoint) && fullStrokeSigIn.Value) {
+    if (childStatuses.every(elem => elem.coolingAirOn)) {
       coolingAirOut.Value = 1;
     }
     else coolingAirOut.Value = 0;
@@ -133,27 +139,30 @@ function startSigPinWatch(err, value) {
   if (err) throw err;
   if (value) startSigIn.Value = 1;
   else startSigIn.Value = 0;
+  console.log(startSigIn.Value);
 }
 
 function stopSigPinWatch(err, value) {
   if (err) throw err;
   if (value) stopSigIn.Value = 1;
   else stopSigIn.Value = 0;
+  console.log(stopSigIn.Value);
 }
 
 function FSSigPinWatch(err, value) {
   if (err) throw err;
   if (value) fullStrokeSigIn.Value = 1;
   else fullStrokeSigIn.Value = 0;
+  console.log(fullStrokeSigIn.Value);
 }
 // End Watch Input Pins
 
 function i2cIntervalTask() {
   systemInitialized = Data.isSystemInitialized();
   systemInitInProgress = Data.isSystemInitInProgress();
-  readingAndLoggingActive = Data.RALA();
+  //readingAndLoggingActive = Data.RALA();
 
-  if (!readingAndLoggingActive && systemInitialized && !systemInitInProgress) {
+  if (systemInitialized && !systemInitInProgress) {
     i2cHandling();
   }
   else if (!systemInitialized && !systemInitInProgress) {
@@ -171,6 +180,7 @@ module.exports = {
   logRequestSent: logRequestSent,
   getChildInfo: getChildInfo,
   i2cIntervalTask: i2cIntervalTask,
+  readyForLogging: readyForLogging,
   startSigPinWatch: startSigPinWatch,
   stopSigPinWatch: stopSigPinWatch,
   FSSigPinWatch, FSSigPinWatch,
