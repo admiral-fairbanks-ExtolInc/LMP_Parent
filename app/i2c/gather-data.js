@@ -1,10 +1,7 @@
 
 const async = require('async');
-const moment = require('moment');
-const main = require('./i2c-routine');
 const i2c = require('i2c-bus');
 const MongoClient = require('mongodb').MongoClient;
-const Server = require('mongodb').Server;
 const _ = require('lodash');
 
 let childAddresses = [5];
@@ -36,8 +33,8 @@ function broadcastData(statusMessageBuffer, cb) {
     }
 
     if (statusMessageBuffer[3]) {
-      main.logRequestSent = true;
       //TODO: won't work. needs to be refactored.
+      //main.logRequestSent = true;
       console.log('3 status broadcasted');
     }
 
@@ -48,7 +45,7 @@ function broadcastData(statusMessageBuffer, cb) {
 }
 
 // Reads data obtained from all children
-function readData(cb) {
+function readData(options, cb) {
 
   if (!_.isFunction(cb)) {
     throw new Error('readData called with invalid args');
@@ -58,7 +55,7 @@ function readData(cb) {
 
   let readLength;
 
-  if (!main.dataloggingInfo) {
+  if (!options.dataloggingInfo) {
     readLength = replyNoDatalog;
   } else { //update to be based on board heater number
     readLength = replyDatalog;
@@ -264,16 +261,12 @@ function setupLoop() {
 function isSystemInitialized() {
   return systemInitialized;
 }
-function getStatus() {
-  return statuses;
-}
 
 module.exports = {
   setupLoop,
   broadcastData,
   readData,
   processData,
-  getStatus,
   isSystemInitialized,
   childAddresses,
   statusBroadcasted,

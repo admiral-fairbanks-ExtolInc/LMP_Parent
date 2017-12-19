@@ -31,6 +31,7 @@ i2cRoutine.__set__('coolingAirPin', coolingAirPin);
 i2cRoutine.__set__('cycleCompletePin', cycleCompletePin);
 i2cRoutine.__set__('lmpFltedPin', lmpFltedPin);
 i2cRoutine.__set__('gatherData', gatherData);
+i2cRoutine.__set__('dataloggingInfo', false);
 /* eslint-enable no-underscore-dangle */
 
 describe('i2c-routine', function () {
@@ -64,19 +65,21 @@ describe('i2c-routine', function () {
     i2cRoutine.i2cHandling((err) => {
 
       expect(broadcastData.called).to.be.true;
+      expect(broadcastData.calledWith(sinon.match.instanceOf(Buffer), sinon.match.func)).to.be.true;
       expect(readData.called).to.be.true;
+      expect(readData.calledWith(sinon.match({ dataloggingInfo: false }), sinon.match.func)).to.be.true;
       expect(processData.called).to.be.true;
-      expect(processData.calledWith(expectedSlaveData)).to.be.true;
+      expect(processData.calledWith(expectedSlaveData), sinon.match.func).to.be.true;
 
       expect(writeExtendPressPin.called).to.be.true;
       expect(writeCoolingAirPin.called).to.be.true;
       expect(writeCycleCompletePin.called).to.be.true;
       expect(writeLmpFltedPin.called).to.be.true;
 
-      expect(writeExtendPressPin.calledWith(false)).to.be.true;
-      expect(writeCoolingAirPin.calledWith(false)).to.be.true;
-      expect(writeCycleCompletePin.calledWith(false)).to.be.true;
-      expect(writeLmpFltedPin.calledWith(false)).to.be.true;
+      expect(writeExtendPressPin.calledWith(false), sinon.match.func).to.be.true;
+      expect(writeCoolingAirPin.calledWith(false), sinon.match.func).to.be.true;
+      expect(writeCycleCompletePin.calledWith(false), sinon.match.func).to.be.true;
+      expect(writeLmpFltedPin.calledWith(false), sinon.match.func).to.be.true;
 
       done();
 

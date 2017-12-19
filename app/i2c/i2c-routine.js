@@ -13,6 +13,7 @@ function PinData(value, pin, type) {
   this.type = type;
 }
 
+// TODO: For these objects only value is ever used, and is set to a boolean
 
 const startSigIn = {
   value: 0,
@@ -77,7 +78,7 @@ function i2cHandling(done) {
     },
     (cb) => {
       // Then, read data from each child controller
-      gatherData.readData(cb);
+      gatherData.readData({ dataloggingInfo }, cb);
     },
     (data, cb) => {
       // Then, process the data obtained from the children
