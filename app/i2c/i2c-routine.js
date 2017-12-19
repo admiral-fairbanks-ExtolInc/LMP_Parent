@@ -110,7 +110,7 @@ function i2cHandling(done) {
 
       async.series([
         (cb2) => {
-          console.log(`extendPressOut.value=${extendPressOut.value}`);
+          //console.log(`extendPressOut.value=${extendPressOut.value}`);
           extendPressPin.write(extendPressOut.value, (err) => {
             cb2(err);
           });

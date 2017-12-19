@@ -43,7 +43,7 @@ describe('i2c-routine', function () {
     const expectedSlaveStatus = [];
 
     for (let i = 0; i < slaveCount; i += 1) {
-      expectedSlaveData.push(`slave ${i} response`);
+      expectedSlaveData.push(Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05]));
       expectedSlaveStatus.push(gatherData.getInitialHeaterStatus());
 
       for (let j = 0; j < lmpCount; j += 1) {
@@ -74,6 +74,10 @@ describe('i2c-routine', function () {
       expect(writeLmpFltedPin.called).to.be.true;
 
       expect(writeExtendPressPin.calledWith(false)).to.be.true;
+      expect(writeCoolingAirPin.calledWith(false)).to.be.true;
+      expect(writeCycleCompletePin.calledWith(false)).to.be.true;
+      expect(writeLmpFltedPin.calledWith(false)).to.be.true;
+
       done();
 
     });
