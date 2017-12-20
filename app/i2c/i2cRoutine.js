@@ -49,10 +49,10 @@ const url = 'mongodb://localhost:27017/mydb';
 const i2cTmr = new NanoTimer();
 const app = express();
 // IO Configuration
-const extendPressPin = new Gpio(16, 'out');
-const coolingAirPin = new Gpio(19, 'out');
-const cycleCompletePin = new Gpio(20, 'out');
-const lmpFltedPin = new Gpio(26, 'out');
+const extendPressPin = new Gpio(17, 'out');
+const coolingAirPin = new Gpio(18, 'out');
+const cycleCompletePin = new Gpio(19, 'out');
+const lmpFltedPin = new Gpio(20, 'out');
 
 // End IO Config
 
@@ -64,19 +64,46 @@ let logRequestSent;
 let heatersMapped;
 let systemInitialized = false;
 let systemInitInProgress = false;
+let updatedSettings = {
+  meltTemp: 550,
+  releaseTemp: 120,
+  maxHeaterOnTime: 30,
+  dwellTime: 0,
+};
 
 function readyForLogging() {
   return dataloggingInfo
 }
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
-function i2cHandling() {
+function i2cHandling(settings) {
   async.series([
   (cb) => {
-    // Broadcast out Status
     let status = [startSigIn.Value, stopSigIn.Value,
       fullStrokeSigIn.Value, dataloggingInfo];
-    Data.broadcastData(Buffer.from(status), cb);
+    // Broadcast out Status
+    if (updatedSettings.meltTemp !== settings.meltTemp ||
+      updatedSettings.releaseTemp !== settings.releaseTemp ||
+      updatedSettings.maxHeaterOnTime !== settings.maxHeaterOnTime ||
+      updatedSettings.dwellTime !== settings.dwellTime) {
+      updatedSettings = settings;
+      console.log("settings updated");
+      let broadcastBuffer = Buffer.alloc(12);
+      broadcastBuffer.writeUInt8(startSigIn.Value, 0);
+      broadcastBuffer.writeUInt8(stopSigIn.Value, 1);
+      broadcastBuffer.writeUInt8(fullStrokeSigIn.Value, 2);
+      broadcastBuffer.writeUInt8(dataloggingInfo, 3);
+      broadcastBuffer.writeUInt16BE(updatedSettings.meltTemp, 4);
+      broadcastBuffer.writeUInt16BE(updatedSettings.releaseTemp, 6);
+      broadcastBuffer.writeUInt16BE(updatedSettings.maxHeaterOnTime*10, 8);
+      broadcastBuffer.writeUInt16BE(updatedSettings.dwellTime*10, 10);
+      console.log(broadcastBuffer);
+      Data.broadcastData(broadcastBuffer, cb);
+    }
+    else {
+      let broadcastBuffer = Buffer.from(status);
+      Data.broadcastData(broadcastBuffer, cb);
+    }
   },
   (cb) => {
     let status = [startSigIn.Value, stopSigIn.Value,
@@ -158,13 +185,13 @@ function FSSigPinWatch(err, value) {
 }
 // End Watch Input Pins
 
-function i2cIntervalTask() {
+function i2cIntervalTask(settings) {
   systemInitialized = Data.isSystemInitialized();
   systemInitInProgress = Data.isSystemInitInProgress();
   //readingAndLoggingActive = Data.RALA();
 
   if (systemInitialized && !systemInitInProgress) {
-    i2cHandling();
+    i2cHandling(settings);
   }
   else if (!systemInitialized && !systemInitInProgress) {
     Data.setupLoop();

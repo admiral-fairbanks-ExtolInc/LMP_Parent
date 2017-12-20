@@ -8,14 +8,21 @@ const NanoTimer = require('nanotimer');
 const exec = require('child_process').exec;
 const app = express();
 const Gpio = require('onoff').Gpio;
-const i2cTmr = new NanoTimer();
 const startSigPin = new Gpio(5, 'in', 'both');
 const stopSigPin = new Gpio(6, 'in', 'both');
-const fullStrokePin = new Gpio(13, 'in', 'both');
+const fullStrokePin = new Gpio(12, 'in', 'both');
+const childSettings = {
+  meltTemp: 550,
+  releaseTemp: 120,
+  maxHeaterOnTime: 30,
+  dwellTime: 0,
+};
+
 let count = 0;
 let childStatuses;
 
-i2cTmr.setInterval(i2c.i2cIntervalTask, '', '750m');
+const i2cTmr = setInterval(function() { 
+  i2c.i2cIntervalTask(childSettings); }, 750);
 
 startSigPin.watch(i2c.startSigPinWatch);
 stopSigPin.watch(i2c.stopSigPinWatch);
@@ -49,12 +56,23 @@ app.post('/server/updateSetpoint', (req, res) => {
   if (!req.body) return res.sendStatus(400);
   let change = req.body;
   let success;
-  console.log(change);
-  if (change.title === 'Heater Melt Temp Setpoint' ||
-  change.title === 'Heater Release Temp Setpoint') {
+  if (change.title === 'Heater Melt Temp Setpoint') {
+    childSettings.meltTemp = change.value;
     res.json({results: 'Success'});
   }
-  else res.json({results: 'Invalid Setpoint Change'})
+  else if (change.title === 'Heater Release Temp Setpoint') {
+    childSettings.releaseTemp = change.value;
+    res.json({results: 'Success'});
+  }
+  else if (change.title === 'Heater Maximum On Time') {
+    childSettings.maxHeaterOnTime = change.value;
+    res.json({results: 'Success'});
+  }
+  else if (change.title === 'Heater Dwell Time') {
+    childSettings.dwellTime = change.value;
+    res.json({results: 'Success'});
+  }
+  else res.json({results: 'Invalid Settings Change'})
 
 });
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
 const Axios = require('axios');
 
-export default class setpointInput extends React.Component {
+export default class TempInput extends React.Component {
   constructor(props) {
     super(props);
 

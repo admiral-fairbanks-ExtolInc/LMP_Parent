@@ -11,7 +11,8 @@ import { InputGroup, InputGroupButton, Input, Button,
 import NumericInput from 'react-numeric-input';
 import Nav from './nav';
 import tempGraph from './tempGraph';
-import SetpointInput from './setpointInput';
+import TempInput from './tempSetpointInput';
+import SetpointInput from './timeSetpointInput';
 const Axios = require('axios');
 
 class App extends Component {
@@ -47,6 +48,14 @@ class App extends Component {
         {
           title: 'Heater Release Temp Setpoint',
           boilerplate: '120'
+        },
+        {
+          title: 'Heater Maximum On Time',
+          boilerplate: '30'
+        },
+        {
+          title: 'Heater Dwell Time',
+          boilerplate: '0'
         }
       ],
       showToolTip: false,
@@ -187,16 +196,18 @@ class App extends Component {
           <Container>
             <Row>
               <Col>
+                <TempInput type={this.state.types[0]} />
               </Col>
               <Col>
-                <SetpointInput type={this.state.types[0]} />
+                <TempInput type={this.state.types[1]} />
+              </Col>
+            </Row>
+            <Row>
+              <Col>
+                <SetpointInput type={this.state.types[2]} />
               </Col>
               <Col>
-              </Col>
-              <Col>
-                <SetpointInput type={this.state.types[1]} />
-              </Col>
-              <Col>
+                <SetpointInput type={this.state.types[3]} />
               </Col>
             </Row>
             <br />

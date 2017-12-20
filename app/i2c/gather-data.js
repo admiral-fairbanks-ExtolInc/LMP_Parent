@@ -63,7 +63,7 @@ const individualData = {
 // Broadcasts data to all children
 function broadcastData(statusMessageBuffer, cb) {
   readingAndLoggingActive = true;
-  async.retry({times: 5, interval: 5},
+  async.retryable({times: 5, interval: 5},
     i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
     (err, bytesRead, buffer) => {
     if (err) throw err;
@@ -81,7 +81,7 @@ function readData(status, cb) {
   else readLength = 7; // same
   let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb) => {
-    async.retry({times: 5, interval: 5}, i2c1.i2cRead(item, readLength, tempBuff,
+    async.retryable({times: 5, interval: 5}, i2c1.i2cRead(item, readLength, tempBuff,
       (err, bytesRead, buffer) => {
       if (err) throw err;
       tempBuff = buffer;
@@ -112,7 +112,6 @@ function processData(IOstatus, cb) {
     heaterFaulted: false,
     cycleDatalogged: false,
   };
-  console.log(data);
   if (!statusProcessed) {
     for (let i = 0, l = data.length; i < l; i += 1) {
       const statusByte = data[i].readInt8(0);
@@ -256,7 +255,7 @@ function populateDatabase(database) {
   const broadcastBuff = Buffer.alloc(1, 1);
   async.series([
     (cb) => {
-      async.retry({times: 5, interval: 5}, i2c1.scan((err, dev) => {
+      i2c1.scan((err, dev) => {
         if (err) throw err;
         dev.forEach((elem, ind, arr) => {
           if (elem < 35) {
@@ -268,10 +267,10 @@ function populateDatabase(database) {
             cb(err);
           }
         })
-      }));
+      });
     },
     (cb) => {
-      async.retry({times: 5, interval: 5}, i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
+      async.retryable({times: 5, interval: 5}, i2c1.i2cWrite(0, broadcastBuff.byteLength, broadcastBuff,
         (err, bytesWritten, buffer) => {
         if (err) throw err;
         cb(err);
@@ -281,7 +280,7 @@ function populateDatabase(database) {
       async.eachOfSeries(childAddresses, (item, key, cb) => {
         let receivedBuff = Buffer.alloc(4);
         let heaterTypes;
-        async.retry({times: 5, interval: 5}, i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
+        async.retryable({times: 5, interval: 5}, i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
           (err, bytesRead, receivedBuff) => {
           if (err) throw err;
           heaterTypes = receivedBuff.toString();
