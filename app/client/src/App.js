@@ -13,6 +13,7 @@ import Nav from './nav';
 import tempGraph from './tempGraph';
 import TempInput from './tempSetpointInput';
 import SetpointInput from './timeSetpointInput';
+import CalibrateRTDButton from './calibrateRtdButton';
 const Axios = require('axios');
 
 class App extends Component {
@@ -56,6 +57,9 @@ class App extends Component {
         {
           title: 'Heater Dwell Time',
           boilerplate: '0'
+        },
+        {
+          title: 'Calibrate RTD'
         }
       ],
       showToolTip: false,
@@ -218,6 +222,9 @@ class App extends Component {
                 {(this.state.randomDataIntervalId)
                   ? <Button color="success" onClick={this.turnOffRandomData}>Turn Off Data Gathering</Button>
                   : <Button color="success" onClick={this.turnOnRandomData}>Turn On Gathering</Button>}
+              </Col>
+              <Col>
+                <CalibrateRTDButton type={this.state.types[4]} />
               </Col>
             </Row>
             <br />

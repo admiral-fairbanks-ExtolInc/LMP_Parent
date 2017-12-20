@@ -21,7 +21,7 @@ const childSettings = {
 let count = 0;
 let childStatuses;
 
-const i2cTmr = setInterval(function() { 
+const i2cTmr = setInterval(function() {
   i2c.i2cIntervalTask(childSettings); }, 750);
 
 startSigPin.watch(i2c.startSigPinWatch);
@@ -74,6 +74,18 @@ app.post('/server/updateSetpoint', (req, res) => {
   }
   else res.json({results: 'Invalid Settings Change'})
 
+});
+
+app.post('/server/calibrateRtd', (req, res) => {
+  if (!req.body) return res.sendStatus(400);
+  let change = req.body;
+  let success;
+  if (change.title === 'Calibrate RTD') {
+    childSettings.calibrateRtd = true;
+    res.json({results: 'Success'});
+    i2c.engageRtdCalibration();
+  }
+  else res.json({results: 'Calibration Failed'});
 });
 
 app.post('/payload', (req, res) => {
