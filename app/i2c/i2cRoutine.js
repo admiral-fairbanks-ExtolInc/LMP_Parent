@@ -78,10 +78,12 @@ function readyForLogging() {
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 function i2cHandling(settings) {
+  if (readingAndLoggingActive) return;
   async.series([
   (cb) => {
     let status = [startSigIn.Value, stopSigIn.Value,
       fullStrokeSigIn.Value, dataloggingInfo, calibrateRtd];
+    readingAndLoggingActive = true;
     // Broadcast out Status
     if (updatedSettings.meltTemp !== settings.meltTemp ||
       updatedSettings.releaseTemp !== settings.releaseTemp ||
@@ -191,7 +193,6 @@ function FSSigPinWatch(err, value) {
 function i2cIntervalTask(settings) {
   systemInitialized = Data.isSystemInitialized();
   systemInitInProgress = Data.isSystemInitInProgress();
-  //readingAndLoggingActive = Data.RALA();
 
   if (systemInitialized && !systemInitInProgress) {
     i2cHandling(settings);
