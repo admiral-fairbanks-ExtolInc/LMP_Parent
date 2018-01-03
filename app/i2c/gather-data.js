@@ -1,4 +1,3 @@
-
 const async = require('async');
 const i2c = require('i2c-bus');
 const MongoClient = require('mongodb').MongoClient;
@@ -16,7 +15,7 @@ const replyDatalog = 33;
 const replyNoDatalog = 3;
 
 // Broadcasts data to all children
-function broadcastData(statusMessageBuffer, cb) {
+function broadcastData2(statusMessageBuffer, cb) {
 
   if (!_.isArrayLike(statusMessageBuffer) || !_.isFunction(cb)) {
     throw new Error('broadcastData called with invalid args');
@@ -39,6 +38,37 @@ function broadcastData(statusMessageBuffer, cb) {
     }
 
     return cb();
+
+  });
+
+}
+
+// Broadcasts data to all children
+function broadcastData(statusMessageBuffer, done) {
+
+  async.eachOfSeries(childAddresses, (item, key, cb) => {
+
+    async.retryable(
+      { times: 5, interval: 5 },
+      i2c1.i2cWrite(item, statusMessageBuffer.byteLength, statusMessageBuffer, (err) => {
+
+        if (err) {
+          console.log(childAddresses);
+          console.log('i2c_error_write');
+        }
+
+        return cb(err);
+
+      })
+    );
+
+  }, (err) => {
+
+    if (err) {
+      console.log(err);
+    }
+
+    return done(err);
 
   });
 
@@ -121,12 +151,24 @@ function processData(slaveData, cb) {
     const statusByte = slaveData[i].readInt8(0);
 
     /* eslint-disable no-bitwise */
-    if ((statusByte & 1) === 1) { heaterStatus.heaterCycleRunning = true; }
-    if ((statusByte & 2) === 2) { heaterStatus.heaterAtSetpoint = true; }
-    if ((statusByte & 4) === 4) { heaterStatus.heaterAtRelease = true; }
-    if ((statusByte & 8) === 8) { heaterStatus.heaterCycleComplete = true; }
-    if ((statusByte & 16) === 16) { heaterStatus.heaterFaulted = true; }
-    if ((statusByte & 32) === 32) { heaterStatus.cycleDatalogged = true; }
+    if ((statusByte & 1) === 1) {
+      heaterStatus.heaterCycleRunning = true;
+    }
+    if ((statusByte & 2) === 2) {
+      heaterStatus.heaterAtSetpoint = true;
+    }
+    if ((statusByte & 4) === 4) {
+      heaterStatus.heaterAtRelease = true;
+    }
+    if ((statusByte & 8) === 8) {
+      heaterStatus.heaterCycleComplete = true;
+    }
+    if ((statusByte & 16) === 16) {
+      heaterStatus.heaterFaulted = true;
+    }
+    if ((statusByte & 32) === 32) {
+      heaterStatus.cycleDatalogged = true;
+    }
     /* eslint-enable no-bitwise */
 
     for (let j = 0; j < 4; j += 4) {
