@@ -13,7 +13,7 @@ import Nav from './nav';
 import tempGraph from './tempGraph';
 import TempInput from './tempSetpointInput';
 import SetpointInput from './timeSetpointInput';
-import CalibrateRTDButton from './calibrateRtdButton';
+import CalibrateRTDButton from './calibrateRtd';
 const Axios = require('axios');
 
 class App extends Component {

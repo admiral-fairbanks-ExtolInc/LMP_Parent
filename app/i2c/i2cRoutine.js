@@ -57,7 +57,7 @@ const lmpFltedPin = new Gpio(20, 'out');
 // End IO Config
 
 let dataloggingInfo = false;
-let calibrateRtd;
+let calibrateRtd = false;
 let dbCreated;
 let readingAndLoggingActive;
 let childStatuses = [];
@@ -78,8 +78,14 @@ function readyForLogging() {
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 function i2cHandling(settings) {
+  console.log(updatedSettings);
+  if (readingAndLoggingActive) {
+    console.log("read and log active, quitting");
+    return;
+  }
   async.series([
   (cb) => {
+    readingAndLoggingActive = true;
     let status = [startSigIn.Value, stopSigIn.Value,
       fullStrokeSigIn.Value, dataloggingInfo, calibrateRtd];
     // Broadcast out Status
@@ -87,7 +93,10 @@ function i2cHandling(settings) {
       updatedSettings.releaseTemp !== settings.releaseTemp ||
       updatedSettings.maxHeaterOnTime !== settings.maxHeaterOnTime ||
       updatedSettings.dwellTime !== settings.dwellTime) {
-      updatedSettings = settings;
+      updatedSettings.meltTemp = settings.meltTemp;
+      updatedSettings.releaseTemp = settings.releaseTemp;
+      updatedSettings.maxHeaterOnTime = settings.maxHeaterOnTime;
+      updatedSettings.dwellTime = settings.dwellTime;
       console.log("settings updated");
       let broadcastBuffer = Buffer.alloc(13);
       broadcastBuffer.writeUInt8(startSigIn.Value, 0);
@@ -99,7 +108,7 @@ function i2cHandling(settings) {
       broadcastBuffer.writeUInt16BE(updatedSettings.releaseTemp, 7);
       broadcastBuffer.writeUInt16BE(updatedSettings.maxHeaterOnTime*10, 9);
       broadcastBuffer.writeUInt16BE(updatedSettings.dwellTime*10, 11);
-      console.log(broadcastBuffer);
+      //console.log(broadcastBuffer);
       Data.broadcastData(broadcastBuffer, cb);
     }
     else {
@@ -144,7 +153,7 @@ function i2cHandling(settings) {
     else if (!cycleCompleteOut.Value && logRequestSent) {
       logRequestSent = false;
     }
-    calibrateRtd = false;
+    if (calibrateRtd) calibrateRtd = false;
     // Checks to see if any modules are faulted. If so, Parent
     // needs to send out LMP Faulted signal
     lmpFltedOut.Value = childStatuses.some(elem => elem.heaterFaulted);
@@ -191,7 +200,6 @@ function FSSigPinWatch(err, value) {
 function i2cIntervalTask(settings) {
   systemInitialized = Data.isSystemInitialized();
   systemInitInProgress = Data.isSystemInitInProgress();
-  //readingAndLoggingActive = Data.RALA();
 
   if (systemInitialized && !systemInitInProgress) {
     i2cHandling(settings);
@@ -208,6 +216,7 @@ function cb(err) {
 
 function engageRtdCalibration() {
   calibrateRtd = true;
+  console.log(calibrateRtd);
 }
 
 module.exports = {

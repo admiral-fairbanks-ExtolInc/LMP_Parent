@@ -63,12 +63,21 @@ const individualData = {
 // Broadcasts data to all children
 function broadcastData(statusMessageBuffer, cb) {
   readingAndLoggingActive = true;
-  async.retryable({times: 5, interval: 5},
-    i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
+  async.eachOfSeries(childAddresses, (item, key, cb) => {
+    async.retryable({times: 5, interval: 5},
+    i2c1.i2cWrite(item, statusMessageBuffer.byteLength, statusMessageBuffer,
     (err, bytesRead, buffer) => {
-    if (err) throw err;
+    if (err) {
+      console.log(childAddresses);
+      console.log("i2c_error_write");
+    }
     cb();
   }));
+  },
+  (err) => {
+    if (err) throw err;
+    cb();
+  })
 };
 
 // Reads data obtained from all children
@@ -78,16 +87,19 @@ function readData(status, cb) {
   let readLength;
   let targetChild;
   if (!dataloggingInfo) readLength = 3; //update to be based on board heater number
-  else readLength = 7; // same
+  else readLength = 23; // same
   let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb) => {
-    async.retryable({times: 5, interval: 5}, i2c1.i2cRead(item, readLength, tempBuff,
+    //async.retryable({times: 5, interval: 5}, 
+    i2c1.i2cRead(item, readLength, tempBuff,
       (err, bytesRead, buffer) => {
       if (err) throw err;
+      //console.log(bytesRead);
+      //console.log(buffer);
       tempBuff = buffer;
       data[key] = tempBuff;
       cb(err);
-    }));
+    });
   },
   (err) => {
     if (err) throw err;

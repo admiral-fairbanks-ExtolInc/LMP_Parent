@@ -11,7 +11,6 @@ export default class CalibrateRTDButton extends React.Component {
   handleClick(event) {
     const packet = {
       title: this.props.type.title,
-      value: this.state.value
     }
     Axios({
       method: 'post',
