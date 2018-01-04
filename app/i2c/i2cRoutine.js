@@ -78,7 +78,7 @@ function readyForLogging() {
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 function i2cHandling(settings) {
-  console.log(updatedSettings);
+  //console.log(updatedSettings);
   if (readingAndLoggingActive) {
     console.log("read and log active, quitting");
     return;
