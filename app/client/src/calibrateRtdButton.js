@@ -1,5 +1,5 @@
 import React from 'react';
-import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
+import { Button } from 'reactstrap';
 const Axios = require('axios');
 
 export default class CalibrateRTDButton extends React.Component {
@@ -9,10 +9,6 @@ export default class CalibrateRTDButton extends React.Component {
   }
 
   handleClick(event) {
-    const packet = {
-      title: this.props.type.title,
-      value: this.state.value
-    }
     Axios({
       method: 'post',
       url: '/server/calibrateRtd',
@@ -33,7 +29,6 @@ export default class CalibrateRTDButton extends React.Component {
 
   render() {
     let { title } = this.props.type;
-    let { submitFcn } = this.props;
     return (
       <div>
         <h4>{title}</h4>

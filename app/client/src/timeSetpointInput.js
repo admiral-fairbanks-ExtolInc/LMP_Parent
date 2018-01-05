@@ -18,10 +18,6 @@ export default class SetpointInput extends React.Component {
   }
 
   handleSubmit(event) {
-    const packet = {
-      title: this.props.type.title,
-      value: this.state.value
-    }
     Axios({
       method: 'post',
       url: '/server/updateSetpoint',
@@ -43,7 +39,6 @@ export default class SetpointInput extends React.Component {
 
   render() {
     let { title, boilerplate } = this.props.type;
-    let { submitFcn } = this.props;
     return (
       <div>
         <h4>{title}</h4>

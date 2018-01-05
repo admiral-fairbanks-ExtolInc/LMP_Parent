@@ -1,17 +1,12 @@
 import React, { Component } from 'react';
 import './App.css';
 import {LineChart} from 'react-easy-chart';
-import { escapeHTML } from './util';
 import ToolTip from './ToolTip';
 import moment from 'moment';
 import { timeParse as parse } from 'd3-time-format';
-import { Scrollspy } from 'react-scrollspy';
-import { InputGroup, InputGroupButton, Input, Button,
-  Container, Row, Col } from 'reactstrap';
-import NumericInput from 'react-numeric-input';
-const Axios = require('axios');
+import { Button, Row, Col } from 'reactstrap';
 
-export default class tempGraph extends Component {
+export default class TempGraph extends Component {
   constructor(props) {
     super(props);
       // Generate multiple lines of data
@@ -35,7 +30,7 @@ export default class tempGraph extends Component {
     this.state = {
       showToolTip: false,
       windowWidth: initialWidth - 100,
-      componentWidth: 300
+      componentWidth: 200
     };
   }
 
@@ -50,8 +45,8 @@ export default class tempGraph extends Component {
 
   handleResize() {
     this.setState({
-      windowWidth: window.innerWidth - 100,
-      componentWidth: window.innerWidth - 200
+      windowWidth: window.innerWidth - 400,
+      componentWidth: window.innerWidth - 450
     });
   }
 
@@ -166,22 +161,8 @@ export default class tempGraph extends Component {
     return(
       <div>
         <Row>
-          <Col xs='4'>
-            <h3>Heater Melt Temp Setpoint</h3>
-            <InputGroup>
-              <InputGroupButton><Button onClick={this.logMeltTempValue}>Submit</Button></InputGroupButton>
-              <Input placeholder='500' type='number' step='10'/>
-            </InputGroup>
-          </Col>
-          <Col xs='4'>
-            <h4>Heater Release Temp Setpoint</h4>
-            <InputGroup>
-              <InputGroupButton><Button onClick={this.logReleaseTempValue}>Submit</Button></InputGroupButton>
-              <Input placeholder='120' type='number' step='10'/>
-            </InputGroup>
-          </Col>
-          <Col xs='4'>
-            <h3>Begin Data Gathering</h3>
+          <Col xs='12'>
+            <h4>Begin Data Gathering</h4>
             {(this.state.randomDataIntervalId)
               ? <Button color="success" onClick={this.turnOffRandomData}>Turn Off Data Gathering</Button>
               : <Button color="success" onClick={this.turnOnRandomData}>Turn On Gathering</Button>}
@@ -195,7 +176,7 @@ export default class tempGraph extends Component {
               datePattern={'%d-%b-%y %H:%M'}
               xType={'time'}
               width={this.state.componentWidth}
-              height={this.state.componentWidth / 2}
+              height={this.state.componentWidth / 2.5}
               interpolate={'cardinal'}
               yDomainRange={[0, 1000]}
               axisLabels={{ x: 'Hour', y: 'Percentage' }}

@@ -1,9 +1,13 @@
 import React from 'react';
-import { Collapse, Navbar, NavbarToggler, NavbarBrand, Nav, NavItem, NavLink } from 'reactstrap';
+import { Collapse, Navbar, NavbarToggler, NavbarBrand, Nav, NavItem, NavLink as NavLinkRS } from 'reactstrap';
+import {
+  BrowserRouter as Router,
+  Link,
+  NavLink
+} from 'react-router-dom';
+import extolLogo from './extolLogo.jpg';
 
-import extolLogo from './extolLogo.jpg'
-
-export default class nav extends React.Component {
+export default class LmpNav extends React.Component {
   constructor(props) {
     super(props);
 
@@ -25,12 +29,22 @@ export default class nav extends React.Component {
           <NavbarToggler onClick={this.toggle} />
           <Collapse isOpen={this.state.isOpen} navbar>
             <Nav className="ml-auto" navbar>
-              <NavItem>
-                <NavLink href="/components/">Components</NavLink>
-              </NavItem>
-              <NavItem>
-                <NavLink href="https://github.com/reactstrap/reactstrap">Github</NavLink>
-              </NavItem>
+              <Router>
+                <div>
+                  <NavItem>
+                    <NavLinkRS href="/">Home</NavLinkRS>
+                  </NavItem>
+                  <NavItem>
+                    <NavLinkRS href="/config">Setpoint Page</NavLinkRS>
+                  </NavItem>
+                  <NavItem>
+                    <NavLinkRS href="https://github.com/admiral-fairbanks-ExtolInc/LMP_Parent">LMP Parent Github Repo</NavLinkRS>
+                  </NavItem>
+                  <NavItem>
+                    <NavLinkRS href="https://github.com/admiral-fairbanks-ExtolInc/LMP_Child">LMP Child Github Repo</NavLinkRS>
+                  </NavItem>
+                </div>
+              </Router>
             </Nav>
           </Collapse>
         </Navbar>

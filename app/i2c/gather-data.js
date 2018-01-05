@@ -67,7 +67,7 @@ function broadcastData(statusMessageBuffer, cb) {
     i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
     (err, bytesRead, buffer) => {
     if (err) throw err;
-    cb();
+    return cb();
   }));
 };
 
@@ -132,7 +132,7 @@ function processData(IOstatus, cb) {
     statusProcessed = false;
     cb();
   }
-  /*
+
   if (statusMessageBuffer[3]) {
   const k = 30 * targetHeater;
     individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
@@ -193,7 +193,7 @@ function processData(IOstatus, cb) {
     }).then(processData())
       .catch((err) => {throw (err);});
   }
-  */
+  
 };
 
 // Creates datalog Template
