@@ -42,7 +42,7 @@ export default class SetpointInput extends React.Component {
     return (
       <div>
         <h4>{title}</h4>
-        <InputGroup size='100'>
+        <InputGroup size='lg'>
           <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
           <Input placeholder={boilerplate} onChange={this.updateValue} type='number' step='10' />
           <InputGroupAddon>Sec</InputGroupAddon>

@@ -9,7 +9,6 @@ import TempGraph from './tempGraph';
 import {
   Route,
 } from 'react-router-dom';
-const Axios = require('axios');
 class App extends Component {
   constructor(props) {
     super(props);

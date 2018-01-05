@@ -174,12 +174,11 @@ export default class TempGraph extends Component {
             <LineChart
               data={this.data}
               datePattern={'%d-%b-%y %H:%M'}
-              xType={'time'}
               width={this.state.componentWidth}
               height={this.state.componentWidth / 2.5}
               interpolate={'cardinal'}
               yDomainRange={[0, 1000]}
-              axisLabels={{ x: 'Hour', y: 'Percentage' }}
+              axisLabels={{ x: 'Now', y: 'Temp (℉)' }}
               axes
               grid
               style={{
