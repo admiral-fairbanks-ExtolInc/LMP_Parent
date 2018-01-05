@@ -57,19 +57,19 @@ app.post('/server/updateSetpoint', (req, res) => {
   let change = req.body;
   let success;
   if (change.title === 'Heater Melt Temp Setpoint') {
-    childSettings.meltTemp = change.value;
+    childSettings.meltTemp = parseInt(change.value);
     res.json({results: 'Success'});
   }
   else if (change.title === 'Heater Release Temp Setpoint') {
-    childSettings.releaseTemp = change.value;
+    childSettings.releaseTemp = parseInt(change.value);
     res.json({results: 'Success'});
   }
   else if (change.title === 'Heater Maximum On Time') {
-    childSettings.maxHeaterOnTime = change.value;
+    childSettings.maxHeaterOnTime = parseInt(change.value);
     res.json({results: 'Success'});
   }
   else if (change.title === 'Heater Dwell Time') {
-    childSettings.dwellTime = change.value;
+    childSettings.dwellTime = parseInt(change.value);
     res.json({results: 'Success'});
   }
   else res.json({results: 'Invalid Settings Change'})
