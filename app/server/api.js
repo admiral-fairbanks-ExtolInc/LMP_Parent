@@ -8,6 +8,7 @@ const NanoTimer = require('nanotimer');
 const exec = require('child_process').exec;
 const app = express();
 const Gpio = require('onoff').Gpio;
+const MongoClient = require('mongodb').MongoClient;
 const startSigPin = new Gpio(5, 'in', 'both');
 const stopSigPin = new Gpio(6, 'in', 'both');
 const fullStrokePin = new Gpio(12, 'in', 'both');
@@ -17,6 +18,7 @@ const childSettings = {
   maxHeaterOnTime: 30,
   dwellTime: 0,
 };
+const url = "mongodb://localhost:27017/mydb";
 
 let count = 0;
 let childStatuses;
@@ -86,6 +88,17 @@ app.post('/server/calibrateRtd', (req, res) => {
     i2c.engageRtdCalibration();
   }
   else res.json({results: 'Calibration Failed'});
+});
+
+app.post('/server/getLastCycle', (req, res) => {
+  if (!req.body) return res.sendStatus(400);
+  MongoClient.connect(url, (err, db) => {
+    if (err) res.json({results: 'Failure to connect'});
+    db.collection("Heater_Database").findOne({}, (err, results) => {
+      if (err) res.json({results: 'Failure to find requested data'});
+      else res.json(results);
+    });
+  });
 });
 
 app.post('/payload', (req, res) => {

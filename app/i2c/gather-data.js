@@ -146,38 +146,28 @@ function processData(IOstatus, cb) {
   }
 
   if (statusMessageBuffer[3]) {
-  const k = 30 * targetHeater;
+  const k = 20 * targetHeater;
     individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
     individualData.startData.startTime = data[datalogIndex]
-      .readInt16BE(9 + k) / 100;
+      .readInt16BE(3 + k) / 100;
     individualData.startData.startTemp = data[datalogIndex]
-      .readInt16BE(11 + k) / 10;
-    individualData.startData.startPos = data[datalogIndex]
-      .readInt16BE(13 + k) / 100;
+      .readInt16BE(5 + k) / 10;
     individualData.atSetpointData.atSetpointTime = data[datalogIndex]
-      .readInt16BE(15 + k) / 100;
+      .readInt16BE(7 + k) / 100;
     individualData.atSetpointData.atSetpointTemp = data[datalogIndex]
-      .readInt16BE(17 + k) / 10;
-    individualData.atSetpointData.atSetpointPos = data[datalogIndex]
-      .readInt16BE(19 + k) / 100;
+      .readInt16BE(9 + k) / 10;
     individualData.contactDipData.contactDipTime = data[datalogIndex]
-      .readInt16BE(21 + k) / 100;
+      .readInt16BE(11 + k) / 100;
     individualData.contactDipData.contactDipTemp = data[datalogIndex]
-      .readInt16BE(23 + k) / 10;
-    individualData.contactDipData.contactDipPos = data[datalogIndex]
-      .readInt16BE(25 + k) / 100;
+      .readInt16BE(13 + k) / 10;
     individualData.shutoffData.shutoffTime = data[datalogIndex]
-      .readInt16BE(27 + k) / 100;
+      .readInt16BE(15 + k) / 100;
     individualData.shutoffData.shutoffTemp = data[datalogIndex]
-      .readInt16BE(29 + k) / 10;
-    individualData.shutoffData.shutoffPos = data[datalogIndex]
-      .readInt16BE(31 + k) / 100;
+      .readInt16BE(17 + k) / 10;
     individualData.cycleCompleteData.cycleCompleteTime = data[datalogIndex]
-      .readInt16BE(33 + k) / 100;
+      .readInt16BE(19 + k) / 100;
     individualData.cycleCompleteData.cycleCompleteTemp = data[datalogIndex]
-      .readInt16BE(35 + k) / 10;
-    individualData.cycleCompleteData.cycleCompletePos = data[datalogIndex]
-      .readInt16BE(37 + k) / 100;
+      .readInt16BE(21 + k) / 10;
     db.collection('Heater_Database').update(
       {
         heaterId: {
@@ -297,14 +287,14 @@ function populateDatabase(database) {
           if (err) throw err;
           heaterTypes = receivedBuff.toString();
           //console.log('5 msg received: ' + heaterTypes);
-          /*
-          db.collection('Heater_Database').insertMany([
+
+          db.collection("Heater_Database").insertMany([
             templateGet(key, 1, heaterTypes[0], childAddresses[key]),
             templateGet(key, 2, heaterTypes[1], childAddresses[key]),
             templateGet(key, 3, heaterTypes[2], childAddresses[key]),
             templateGet(key, 4, heaterTypes[3], childAddresses[key]),
           ]);
-          */
+
           cb(err);
         }));
       },
