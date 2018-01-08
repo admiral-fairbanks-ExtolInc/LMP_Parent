@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import './App.css';
-import { Container } from 'reactstrap';
+import {
+  Container
+} from 'reactstrap';
 import LmpNavbar from './nav';
 import TempGraph from './tempGraph';
 import ConfigScreen from './configScrn';

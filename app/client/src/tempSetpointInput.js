@@ -1,5 +1,7 @@
 import React from 'react';
 import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
+import InputWithKeyboard from './keyboardInput.js';
+import 'react-touch-screen-keyboard/lib/Keyboard.css';
 const Axios = require('axios');
 
 export default class TempInput extends React.Component {
@@ -15,6 +17,10 @@ export default class TempInput extends React.Component {
 
   updateValue(event) {
     this.setState({value: event.target.value});
+  }
+
+  handleValueChange(val) {
+    this.setState({ value: val });
   }
 
   handleSubmit(event) {
@@ -44,7 +50,12 @@ export default class TempInput extends React.Component {
         <h4>{title}</h4>
         <InputGroup size='lg'>
           <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
-          <Input placeholder={boilerplate} onChange={this.updateValue} type='number' step='10' />
+          <InputWithKeyboard
+            value={this.state.value}
+            placeholder={boilerplate}
+            onChange={(value) => { this.handleValueChange(value); }}
+            type='number'
+          />
           <InputGroupAddon>℉</InputGroupAddon>
         </InputGroup>
       </div>

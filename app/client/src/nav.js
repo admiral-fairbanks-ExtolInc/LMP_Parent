@@ -22,7 +22,7 @@ export default class LmpNav extends React.Component {
     return (
       <div>
         <Navbar color="info" light expand="md">
-          <NavbarBrand href="/">LMP WEBSERVER III: 3 EDGY 5 ME</NavbarBrand>
+          <NavbarBrand href="/">LMP WEBSERVER</NavbarBrand>
           <NavbarToggler onClick={this.toggle} />
           <Collapse isOpen={this.state.isOpen} navbar>
             <Nav className="ml-auto" navbar>

@@ -1,5 +1,12 @@
 import React from 'react';
-import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
+import { InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  Input,
+  Button
+} from 'reactstrap';
+import KeyboardedInput from 'react-touch-screen-keyboard';
+import 'react-touch-screen-keyboard/lib/Keyboard.css'; // if you just want css
 const Axios = require('axios');
 
 export default class SetpointInput extends React.Component {
@@ -44,7 +51,7 @@ export default class SetpointInput extends React.Component {
         <h4>{title}</h4>
         <InputGroup size='lg'>
           <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
-          <Input placeholder={boilerplate} onChange={this.updateValue} type='number' step='10' />
+          <Input placeholder={boilerplate} onChange={this.updateValue} type='number'/>
           <InputGroupAddon>Sec</InputGroupAddon>
         </InputGroup>
       </div>
