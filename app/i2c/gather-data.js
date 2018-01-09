@@ -64,15 +64,14 @@ const individualData = {
 function broadcastData(statusMessageBuffer, cb) {
   readingAndLoggingActive = true;
   async.eachOfSeries(childAddresses, (item, key, cb) => {
-    async.retryable({times: 5, interval: 5},
     i2c1.i2cWrite(item, statusMessageBuffer.byteLength, statusMessageBuffer,
-    (err, bytesRead, buffer) => {
-    if (err) {
-      console.log(childAddresses);
-      console.log("i2c_error_write");
-    }
-    cb();
-  }));
+    (err, bytesWritten, buffer) => {
+      if (err) {
+        console.log(err);
+        console.log(bytesWritten);
+      }
+      cb();
+    });
   },
   (err) => {
     if (err) throw err;
@@ -90,16 +89,17 @@ function readData(status, cb) {
   else readLength = 23; // same
   let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb) => {
-    //async.retryable({times: 5, interval: 5},
-    i2c1.i2cRead(item, readLength, tempBuff,
-      (err, bytesRead, buffer) => {
-      if (err) throw err;
-      //console.log(bytesRead);
-      //console.log(buffer);
-      tempBuff = buffer;
-      data[key] = tempBuff;
-      cb(err);
-    });
+    async.retryable({times: 5, interval: 5},
+      i2c1.i2cRead(item, readLength, tempBuff,
+        (err, bytesRead, buffer) => {
+        if (err) {
+          console.log(err);
+        }
+        tempBuff = buffer;
+        data[key] = tempBuff;
+        cb(err);
+      })
+    )
   },
   (err) => {
     if (err) throw err;
@@ -287,14 +287,14 @@ function populateDatabase(database) {
           if (err) throw err;
           heaterTypes = receivedBuff.toString();
           //console.log('5 msg received: ' + heaterTypes);
-
+          /*
           db.collection("Heater_Database").insertMany([
             templateGet(key, 1, heaterTypes[0], childAddresses[key]),
             templateGet(key, 2, heaterTypes[1], childAddresses[key]),
             templateGet(key, 3, heaterTypes[2], childAddresses[key]),
             templateGet(key, 4, heaterTypes[3], childAddresses[key]),
           ]);
-
+          */
           cb(err);
         }));
       },

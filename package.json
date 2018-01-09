@@ -50,6 +50,7 @@
     "react-easy-chart": "^1.0.0",
     "react-faux-dom": "^4.1.0",
     "react-scrollspy": "^3.3.4",
+    "react-virtual-keyboard": "^1.0.1",
     "rpi-gpio": "^0.9.1",
     "timer": "0.0.2"
   },

@@ -45,8 +45,8 @@ export default class TempGraph extends Component {
 
   handleResize() {
     this.setState({
-      windowWidth: window.innerWidth - 400,
-      componentWidth: window.innerWidth - 450
+      windowWidth: window.innerWidth - 200,
+      componentWidth: window.innerWidth - 250
     });
   }
 
@@ -172,10 +172,11 @@ export default class TempGraph extends Component {
         <Row>
           <Col xs='12'>
             <LineChart
+              xType = {'time'}
               data={this.data}
               datePattern={'%d-%b-%y %H:%M'}
               width={this.state.componentWidth}
-              height={this.state.componentWidth / 2.5}
+              height={this.state.componentWidth / 1.75}
               interpolate={'cardinal'}
               yDomainRange={[0, 1000]}
               axisLabels={{ x: 'Now', y: 'Temp (℉)' }}

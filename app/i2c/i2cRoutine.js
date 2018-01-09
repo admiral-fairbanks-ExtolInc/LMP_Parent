@@ -150,7 +150,10 @@ function i2cHandling(settings) {
     // Checks if all Modules are at Cycle Complete. If so,
     // Parent needs to send out Cycle Complete Signal
     cycleCompleteOut.Value = childStatuses.every(elem => elem.heaterCycleComplete);
-    if (cycleCompleteOut.Value && !logRequestSent) dataloggingInfo = true;
+    if (cycleCompleteOut.Value && !logRequestSent) {
+      dataloggingInfo = true;
+      console.log("datalogging info true");
+    }
     else if (!cycleCompleteOut.Value && logRequestSent) {
       logRequestSent = false;
     }
