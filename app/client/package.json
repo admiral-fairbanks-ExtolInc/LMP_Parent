@@ -30,6 +30,7 @@
     "react-transition-group": "^2.2.1",
     "react-virtual-keyboard": "^1.0.1",
     "reactstrap": "^4.8.0",
+    "sass-loader": "^6.0.6",
     "victory": "^0.24.1"
   },
   "scripts": {

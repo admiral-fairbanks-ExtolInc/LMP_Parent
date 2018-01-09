@@ -10,6 +10,7 @@ import {
   Route,
   Switch
 } from 'react-router-dom';
+import '../node_modules/react-touch-screen-keyboard/lib/Keyboard.css';
 class App extends Component {
   constructor(props) {
     super(props);

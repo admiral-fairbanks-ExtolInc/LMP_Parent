@@ -1,6 +1,6 @@
 import React from 'react';
 import KeyboardedInput from 'react-touch-screen-keyboard';
-import 'react-touch-screen-keyboard/lib/Keyboard.css';
+import '../node_modules/react-touch-screen-keyboard/lib/Keyboard.css';
 
 class InputWithKeyboard extends React.Component {
   render() {
