@@ -94,6 +94,7 @@ function readData(status, cb) {
         (err, bytesRead, buffer) => {
         if (err) {
           console.log(err);
+          console.log(buffer);
         }
         tempBuff = buffer;
         data[key] = tempBuff;
@@ -133,7 +134,9 @@ function processData(IOstatus, cb) {
       if ((statusByte & 8) === 8) { heaterStatus.heaterAtRelease = true; }
       if ((statusByte & 16) === 16) { heaterStatus.heaterCycleComplete = true; }
       if ((statusByte & 32) === 32) { heaterStatus.heaterFaulted = true; }
-      if ((statusByte & 64) === 64) { heaterStatus.cycleDatalogged = true; }
+      if ((statusByte & 64) === 64) { 
+        heaterStatus.cycleDatalogged = true;
+      }
       for (let j = 0; j < 4; j += 4) {
         heaterStatus.lmpTemps[j] = data[i].readInt16BE(1) / 10;
       }
