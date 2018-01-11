@@ -35,6 +35,9 @@ export default class LmpNav extends React.Component {
                     <NavLinkRS href="/config">Setpoint Page</NavLinkRS>
                   </NavItem>
                   <NavItem>
+                    <NavLinkRS href="/datalog">Trends and Historical Data</NavLinkRS>
+                  </NavItem>
+                  <NavItem>
                     <NavLinkRS href="https://github.com/admiral-fairbanks-ExtolInc/LMP_Parent">LMP Parent Github Repo</NavLinkRS>
                   </NavItem>
                   <NavItem>

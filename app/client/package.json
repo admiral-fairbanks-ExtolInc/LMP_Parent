@@ -22,6 +22,7 @@
     "react-faux-dom": "^2.5.0",
     "react-layout-components": "^3.0.6",
     "react-numeric-input": "^2.2.0",
+    "react-numpad": "^1.0.5",
     "react-router": "^4.2.0",
     "react-router-dom": "^4.2.2",
     "react-scripts": "1.0.17",

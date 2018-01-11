@@ -2,6 +2,7 @@ import React from 'react';
 import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
 import KeyboardedInput from 'react-touch-screen-keyboard';
 import './Keyboard.css';
+import NumPad from 'react-numpad';
 const Axios = require('axios');
 
 export default class TempInput extends React.Component {
@@ -51,14 +52,10 @@ export default class TempInput extends React.Component {
         <h4>{title}</h4>
         <InputGroup size='lg'>
           <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
-          <KeyboardedInput
-            enabled
-            type='number'
+          <NumPad.PositiveIntegerNumber
             onChange={(value) => { this.handleValueChange(value); }}
-            value={this.state.value}
             placeholder={boilerplate}
-            defaultKeyboard="us"
-            opacity={0.75} // optional
+            theme={'orange'}
           />
           <InputGroupAddon>℉</InputGroupAddon>
         </InputGroup>

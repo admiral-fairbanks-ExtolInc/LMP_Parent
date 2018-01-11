@@ -6,7 +6,7 @@ import moment from 'moment';
 import { timeParse as parse } from 'd3-time-format';
 import { Button, Row, Col } from 'reactstrap';
 
-export default class TempGraph extends Component {
+export default class HistoricalGraph extends Component {
   constructor(props) {
     super(props);
       // Generate multiple lines of data
@@ -15,15 +15,16 @@ export default class TempGraph extends Component {
     this.mouseOutHandler = this.mouseOutHandler.bind(this);
     this.mouseMoveHandler = this.mouseMoveHandler.bind(this);
 
-    this.turnOnRandomData = this.turnOnRandomData.bind(this);
-    this.turnOffRandomData = this.turnOffRandomData.bind(this);
-
     this.updateData = this.updateData.bind(this);
     this.handleResize = this.handleResize.bind(this);
     this.toggleState = this.toggleState.bind(this);
 
     this.data = [
-      this.generateData(),
+      [{x:0, y: 70},
+      {x:1000, y:550},
+      {x:4000, y:525},
+      {x:20000, y:550},
+      {x:28000, y: 120}]
     ];
 
     const initialWidth = window.innerWidth > 0 ? window.innerWidth : 500;
@@ -73,58 +74,45 @@ export default class TempGraph extends Component {
     this.setState({ dataDisplay: `The amount selected is ${d.y}` });
   }
 
-  generateData() {
-    const data = [];
-    const xs = [];
-
-    let date = moment('2015-1-1 00:00', 'YYYY-MM-DD HH:mm');
-    for (let i = 1; i <= 12; i++) {
-      xs.push(date.format('D-MMM-YY HH:mm'));
-      date = date.add(1, 'hour');
-    }
-    xs.forEach((x) => {
-      data.push({ x, y: 51 });
-    });
-    return data;
-  }
-
-  turnOnRandomData() {
-    this.setState({ randomDataIntervalId: setInterval(this.updateData, 200) });
-  }
-
-  turnOffRandomData() {
-    clearInterval(this.state.randomDataIntervalId);
-    this.setState({ randomDataIntervalId: null });
-  }
-
   updateData() {
-    const parseDate = parse('%d-%b-%y %H:%M');
-    this.data.forEach((data) => {
-      fetch('/server/tempInfo', {
-        accept: 'application/json'
+    fetch('/server/getLastCycle', {
+      accept: 'application/json'
+    }).then((response) => {
+      if (response.status >= 200 && response.status < 300) {
+        return response;
+      }
+      const error = new Error(`HTTP Error ${response.statusText}`);
+      error.status = response.statusText;
+      error.response = response;
+      console.log(error); // eslint-disable-line no-console
+      throw error;
+    }).then((response) => {
+      return response.json();
+    }).then((res) => {
+      this.setState({
+        data: [
+          {
+            x:res.dataLog.startData.startTime,
+            y:res.dataLog.startData.startTemp
+          },
+          {
+            x:res.dataLog.atSetpointData.atSetpointTime,
+            y:res.dataLog.atSetpointData.atSetpointTemp
+          },
+          {
+            x:res.dataLog.contactDipData.contactDipTime,
+            y:res.dataLog.contactDipData.contactDipTemp
+          },
+          {
+            x:res.dataLog.shutoffData.shutoffTime,
+            y:res.dataLog.shutoffData.shutoffTemp
+          },
+          {
+            x:res.dataLog.cycleCompleteData.cycleCompleteTime,
+            y:res.dataLog.cycleCompleteData.cycleCompleteTemp
+          },
+        ]
       })
-        .then((response) => {
-          if (response.status >= 200 && response.status < 300) {
-            return response;
-          }
-          const error = new Error(`HTTP Error ${response.statusText}`);
-          error.status = response.statusText;
-          error.response = response;
-          console.log(error); // eslint-disable-line no-console
-          throw error;
-        })
-        .then((response) => {
-          return response.json();
-        })
-        .then((res) => {
-          data.shift();
-          let y = res.temp;
-          console.log(y);
-          const date = moment(parseDate(data[data.length - 1].x));
-          date.add(1, 'hour');
-          data.push({ x: date.format('D-MMM-YY HH:mm'), y });
-        });
-
     });
 
     this.forceUpdate();
@@ -159,27 +147,25 @@ export default class TempGraph extends Component {
   }
   render() {
     return(
+
       <div>
+        <br />
         <Row>
           <Col xs='12'>
-            <h4>Begin Data Gathering</h4>
-            {(this.state.randomDataIntervalId)
-              ? <Button color="success" onClick={this.turnOffRandomData}>Turn Off Data Gathering</Button>
-              : <Button color="success" onClick={this.turnOnRandomData}>Turn On Gathering</Button>}
+            <Button color="success" onClick={this.updateData}>Gather Previous Cycle Data</Button>
           </Col>
         </Row>
         <br />
         <Row>
           <Col xs='12'>
             <LineChart
-              xType = {'time'}
               data={this.data}
-              datePattern={'%d-%b-%y %H:%M'}
               width={this.state.componentWidth}
               height={this.state.componentWidth / 1.75}
               interpolate={'cardinal'}
               yDomainRange={[0, 1000]}
-              axisLabels={{ x: 'Now', y: 'Temp (℉)' }}
+              xDomainRange={[0, 35000]}
+              axisLabels={{ x: 'Time (msec)', y: 'Temp (℉)' }}
               axes
               grid
               style={{

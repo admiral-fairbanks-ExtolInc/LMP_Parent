@@ -94,12 +94,19 @@ app.post('/server/getLastCycle', (req, res) => {
   if (!req.body) return res.sendStatus(400);
   MongoClient.connect(url, (err, db) => {
     if (err) res.json({results: 'Failure to connect'});
-    db.collection("Heater_Database").findOne({}, (err, results) => {
-      if (err) res.json({results: 'Failure to find requested data'});
-      else res.json(results);
-    });
+    (async function () {
+      let info = await db.collection("heaterRecords")
+        .find({ heaterID.heaterNumber: { $eq: 1 } })
+        .sort({heaterID.timestampID:-1}).limit(1);
+      res.json(info);
+    })();
   });
 });
+
+(err, results) => {
+  if (err) res.json({results: 'Failure to find requested data'});
+  else res.json(results);
+}
 
 app.post('/payload', (req, res) => {
   //verify that the payload is a push from the correct repo

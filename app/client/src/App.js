@@ -4,7 +4,8 @@ import {
   Container
 } from 'reactstrap';
 import LmpNavbar from './nav';
-import TempGraph from './tempGraph';
+import RealtimeGraph from './realtimeGraph';
+import HistoricalGraph from './historicalGraph';
 import ConfigScreen from './configScrn';
 import {
   Route,
@@ -52,7 +53,8 @@ class App extends Component {
             <Route path='/config' render={(props) => (
                 <ConfigScreen types={this.state.types} />
             )}/>
-          <Route exact path="/" component={TempGraph}/>
+          <Route exact path="/" component={RealtimeGraph}/>
+          <Route exact path="/datalog" component={HistoricalGraph}/>
           </Switch>
         </Container>
       </div>

@@ -28,6 +28,7 @@ let statuses = [];
 let infoBuffers = new Array([childAddresses.length]);
 
 const url = 'mongodb://localhost:27017/mydb';
+const dbName = 'heaterDatabase';
 const numHeaters = 1;
 const replyDatalog = 33;
 const replyNoDatalog = 3;
@@ -128,18 +129,15 @@ function processData(IOstatus, cb) {
   if (!statusProcessed) {
     for (let i = 0, l = data.length; i < l; i += 1) {
       const statusByte = data[i].readInt8(0);
-      if ((statusByte & 1) === 1) { heaterStatus.heaterCycleRunning = true; }
-      if ((statusByte & 2) === 2) { heaterStatus.heaterAtSetpoint = true; }
-      if ((statusByte & 4) === 4) { heaterStatus.coolingAirOn = true; }
-      if ((statusByte & 8) === 8) { heaterStatus.heaterAtRelease = true; }
-      if ((statusByte & 16) === 16) { heaterStatus.heaterCycleComplete = true; }
-      if ((statusByte & 32) === 32) { heaterStatus.heaterFaulted = true; }
-      if ((statusByte & 64) === 64) { 
-        heaterStatus.cycleDatalogged = true;
-      }
-      for (let j = 0; j < 4; j += 4) {
-        heaterStatus.lmpTemps[j] = data[i].readInt16BE(1) / 10;
-      }
+      if ((statusByte & 1) === 1) heaterStatus.heaterCycleRunning = true;
+      if ((statusByte & 2) === 2) heaterStatus.heaterAtSetpoint = true;
+      if ((statusByte & 4) === 4) heaterStatus.coolingAirOn = true;
+      if ((statusByte & 8) === 8) heaterStatus.heaterAtRelease = true;
+      if ((statusByte & 16) === 16) heaterStatus.heaterCycleComplete = true;
+      if ((statusByte & 32) === 32) heaterStatus.heaterFaulted = true;
+      if ((statusByte & 64) === 64) heaterStatus.cycleDatalogged = true;
+      for (let j = 0; j < 4; j += 4) heaterStatus.lmpTemps[j] = data[i]
+        .readInt16BE(1) / 10;
       overallStatus[i] = heaterStatus;
     }
     statusProcessed = true;
@@ -147,40 +145,41 @@ function processData(IOstatus, cb) {
     statusProcessed = false;
     cb();
   }
-
   if (statusMessageBuffer[3]) {
   const k = 20 * targetHeater;
-    individualData.timestampId = moment().format('MMMM Do YYYY, h:mm:ss a');
-    individualData.startData.startTime = data[datalogIndex]
-      .readInt16BE(3 + k) / 100;
-    individualData.startData.startTemp = data[datalogIndex]
-      .readInt16BE(5 + k) / 10;
-    individualData.atSetpointData.atSetpointTime = data[datalogIndex]
-      .readInt16BE(7 + k) / 100;
-    individualData.atSetpointData.atSetpointTemp = data[datalogIndex]
-      .readInt16BE(9 + k) / 10;
-    individualData.contactDipData.contactDipTime = data[datalogIndex]
-      .readInt16BE(11 + k) / 100;
-    individualData.contactDipData.contactDipTemp = data[datalogIndex]
-      .readInt16BE(13 + k) / 10;
-    individualData.shutoffData.shutoffTime = data[datalogIndex]
-      .readInt16BE(15 + k) / 100;
-    individualData.shutoffData.shutoffTemp = data[datalogIndex]
-      .readInt16BE(17 + k) / 10;
-    individualData.cycleCompleteData.cycleCompleteTime = data[datalogIndex]
-      .readInt16BE(19 + k) / 100;
-    individualData.cycleCompleteData.cycleCompleteTemp = data[datalogIndex]
-      .readInt16BE(21 + k) / 10;
-    db.collection('Heater_Database').update(
-      {
-        heaterId: {
-          heaterNumber: 1 + datalogIndex + targetHeater,
-        },
+  const document = {
+    heaterID: {
+      timestampID: moment().format('MMMM Do YYYY, h:mm:ss a'),
+      heaterNumber: 1 + datalogIndex + targetHeater,
+    },
+    dataLog: [
+      startData: {
+        startTime: data[datalogIndex].readInt16BE(3 + k) / 100,
+        startTemp: data[datalogIndex].readInt16BE(5 + k) / 10,
       },
-      {
-        $push: { dataLog: individualData },
-      }
-    ).then((err) => {
+      atSetpointData: {
+        atSetpointTime: data[datalogIndex].readInt16BE(7 + k) / 100,
+        atSetpointTemp: data[datalogIndex].readInt16BE(9 + k) / 10,
+      },
+      contactDipData: {
+        contactDipTime: data[datalogIndex].readInt16BE(11 + k) / 100,
+        contactDipTemp: data[datalogIndex].readInt16BE(13 + k) / 10,
+      },
+      shutoffData: {
+        shutoffTime: data[datalogIndex].readInt16BE(15 + k) / 100,
+        shutoffTemp: data[datalogIndex].readInt16BE(17 + k) / 10,
+      },
+      cycleCompleteData: {
+        cycleCompleteTime: data[datalogIndex].readInt16BE(19 + k) / 100,
+        cycleCompleteTemp: data[datalogIndex].readInt16BE(21 + k) / 10,
+      },
+    ]
+  };
+  MongoClient.connect(url, (err, client) => {
+    if (err) console.log(err.stack);
+    else console.log("Connected correctly to server");
+    const db = client.db(dbName);
+    db.collection('heaterRecords').insertOne(document).then((err) => {
       if (err) throw (err);
       if (err) throw (err);
       targetHeater += 1;
@@ -188,6 +187,7 @@ function processData(IOstatus, cb) {
         targetHeater = 0;
         datalogIndex += 1;
       }
+      client.close();
       if (datalogIndex >= data.length) {
         datalogIndex = 0;
         statusProcessed = false;
@@ -197,66 +197,21 @@ function processData(IOstatus, cb) {
       }
     }).then(processData())
       .catch((err) => {throw (err);});
-  }
-
+    }
+  });
 };
-
-// Creates datalog Template
-function templateGet(index, htrNum, htrType, address) {
-  const heaterTemplate = {
-    heaterId: {
-      heaterNumber: (htrNum + index),
-      lmpType: htrType,
-      controllerNumber: index,
-      heaterI2cAddress: address,
-    },
-    dataLog: {
-      timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
-      startData: {
-        startTime: 0,
-        startTemp: 0,
-        startPos: 0,
-      },
-      atSetpointData: {
-        atSetpointTime: 0,
-        atSetpointTemp: 0,
-        atSetpointPos: 0,
-      },
-      contactDipData: {
-        contactDipTime: 0,
-        contactDipTemp: 0,
-        contactDipPos: 0,
-      },
-      shutoffData: {
-        shutoffTime: 0,
-        shutoffTemp: 0,
-        shutoffPos: 0,
-      },
-      cycleCompleteData: {
-        cycleCompleteTime: 0,
-        cycleCompleteTemp: 0,
-        cycleCompletePos: 0,
-      },
-    },
-  };
-  return heaterTemplate;
-};
-
 
 // Setup Promise Function
 function setupLoop() {
   populatingDatabase = true;
   i2c1 = i2c.open(1, (err) => {
-    // Setup Loop
-    MongoClient.connect(url, (err, database) => {
-      db = database;
-      populateDatabase(db);
-    })
+    if (err) console.log(err.stack);
+    getAddresses();
   });
 }
 
 // Populates Database with blank datalog
-function populateDatabase(database) {
+function getAddresses() {
   const broadcastBuff = Buffer.alloc(1, 1);
   async.series([
     (cb) => {
@@ -280,30 +235,6 @@ function populateDatabase(database) {
         if (err) throw err;
         cb(err);
       }));
-    },
-    (cb) => {
-      async.eachOfSeries(childAddresses, (item, key, cb) => {
-        let receivedBuff = Buffer.alloc(4);
-        let heaterTypes;
-        async.retryable({times: 5, interval: 5}, i2c1.i2cRead(item, receivedBuff.byteLength, receivedBuff,
-          (err, bytesRead, receivedBuff) => {
-          if (err) throw err;
-          heaterTypes = receivedBuff.toString();
-          //console.log('5 msg received: ' + heaterTypes);
-          /*
-          db.collection("Heater_Database").insertMany([
-            templateGet(key, 1, heaterTypes[0], childAddresses[key]),
-            templateGet(key, 2, heaterTypes[1], childAddresses[key]),
-            templateGet(key, 3, heaterTypes[2], childAddresses[key]),
-            templateGet(key, 4, heaterTypes[3], childAddresses[key]),
-          ]);
-          */
-          cb(err);
-        }));
-      },
-      (err) => {
-        cb(err);
-      });
     }
   ],
   (err) => {
