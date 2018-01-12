@@ -11,9 +11,10 @@ const chai = require('chai');
 const expect = chai.expect;
 const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
+const _ = require('lodash');
 
 let childAddresses = [];
-let targetHeater;
+let targetHeater=0;
 let statusBroadcasted;
 let statusProcessed = false;
 let readingFinished;
@@ -62,60 +63,62 @@ const individualData = {
 };
 
 // Broadcasts data to all children
-function broadcastData(statusMessageBuffer, cb) {
+function broadcastData(status, statusMessageBuffer, cb) {
+  if (!_.isArrayLike(statusMessageBuffer) || !_.isFunction(cb)) {
+    throw new Error('broadcastData called with invalid args');
+  }
   readingAndLoggingActive = true;
-  async.eachOfSeries(childAddresses, (item, key, cb) => {
-    i2c1.i2cWrite(item, statusMessageBuffer.byteLength, statusMessageBuffer,
-    (err, bytesWritten, buffer) => {
-      if (err) {
-        console.log(err);
-        console.log(bytesWritten);
-      }
-      cb();
-    });
-  },
-  (err) => {
-    if (err) throw err;
-    cb();
-  })
+  i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
+  (err, bytesWritten, buffer) => {
+    if (err) {
+      console.log(err);
+      console.log(bytesWritten);
+      return cb(err);
+    }
+    console.log("broadcasting done");
+    return cb(status);
+  });
 };
 
 // Reads data obtained from all children
 function readData(status, cb) {
+  if (!_.isFunction(cb)) {
+    throw new Error('readData called with invalid args');
+  }
   let dataloggingInfo = status[3];
-  let data = infoBuffers;
+  let childInfo = [];
   let readLength;
   let targetChild;
   if (!dataloggingInfo) readLength = 3; //update to be based on board heater number
   else readLength = 23; // same
   let tempBuff = Buffer.alloc(readLength);
-  async.eachOfSeries(childAddresses, (item, key, cb) => {
-    async.retryable({times: 5, interval: 5},
-      i2c1.i2cRead(item, readLength, tempBuff,
-        (err, bytesRead, buffer) => {
-        if (err) {
-          console.log(err);
-          console.log(buffer);
-        }
-        tempBuff = buffer;
-        data[key] = tempBuff;
-        cb(err);
-      })
-    )
+  async.eachOfSeries(childAddresses, (item, key, cb2) => {
+    console.log("I happened");
+    i2c1.i2cRead(item, readLength, tempBuff,
+      (err, bytesRead, buffer) => {
+      if (err) {
+        console.log(err);
+        console.log(buffer);
+        return cb2(err);
+      }
+      tempBuff = buffer;
+      childInfo[key] = tempBuff;
+
+      return cb2();
+    })
   },
   (err) => {
-    if (err) throw err;
-    infoBuffers = data;
-    cb();
+    if (err) console.log("Error while reading");
+    else console.log("reading done");
+    return cb(err, status, childInfo);
   })
 };
 
 // Processes data from all children. Includes datalogging to Mongodb
-function processData(IOstatus, cb) {
-  let data = infoBuffers;
-  let datalogIndex;
-  let statusMessageBuffer = IOstatus;
-  const overallStatus = new Array(data.length);
+function processData(status, childInfo, cb) {
+  let datalogIndex=0;
+  console.log("status after call to processData is: " + status);
+  const overallStatus = new Array(childInfo.length);
   const heaterStatus = {
     lmpTemps: [],
     heaterCycleRunning: false,
@@ -127,8 +130,8 @@ function processData(IOstatus, cb) {
     cycleDatalogged: false,
   };
   if (!statusProcessed) {
-    for (let i = 0, l = data.length; i < l; i += 1) {
-      const statusByte = data[i].readInt8(0);
+    for (let i = 0, l = childInfo.length; i < l; i += 1) {
+      const statusByte = childInfo[i].readInt8(0);
       if ((statusByte & 1) === 1) heaterStatus.heaterCycleRunning = true;
       if ((statusByte & 2) === 2) heaterStatus.heaterAtSetpoint = true;
       if ((statusByte & 4) === 4) heaterStatus.coolingAirOn = true;
@@ -136,69 +139,72 @@ function processData(IOstatus, cb) {
       if ((statusByte & 16) === 16) heaterStatus.heaterCycleComplete = true;
       if ((statusByte & 32) === 32) heaterStatus.heaterFaulted = true;
       if ((statusByte & 64) === 64) heaterStatus.cycleDatalogged = true;
-      for (let j = 0; j < 4; j += 4) heaterStatus.lmpTemps[j] = data[i]
+      for (let j = 0; j < 4; j += 4) heaterStatus.lmpTemps[j] = childInfo[i]
         .readInt16BE(1) / 10;
       overallStatus[i] = heaterStatus;
     }
     statusProcessed = true;
     statuses = overallStatus;
     statusProcessed = false;
-    cb();
   }
-  if (statusMessageBuffer[3]) {
-  const k = 20 * targetHeater;
-  const document = {
-    heaterID: {
-      timestampID: moment().format('MMMM Do YYYY, h:mm:ss a'),
-      heaterNumber: 1 + datalogIndex + targetHeater,
-    },
-    dataLog: [
-      startData: {
-        startTime: data[datalogIndex].readInt16BE(3 + k) / 100,
-        startTemp: data[datalogIndex].readInt16BE(5 + k) / 10,
-      },
-      atSetpointData: {
-        atSetpointTime: data[datalogIndex].readInt16BE(7 + k) / 100,
-        atSetpointTemp: data[datalogIndex].readInt16BE(9 + k) / 10,
-      },
-      contactDipData: {
-        contactDipTime: data[datalogIndex].readInt16BE(11 + k) / 100,
-        contactDipTemp: data[datalogIndex].readInt16BE(13 + k) / 10,
-      },
-      shutoffData: {
-        shutoffTime: data[datalogIndex].readInt16BE(15 + k) / 100,
-        shutoffTemp: data[datalogIndex].readInt16BE(17 + k) / 10,
-      },
-      cycleCompleteData: {
-        cycleCompleteTime: data[datalogIndex].readInt16BE(19 + k) / 100,
-        cycleCompleteTemp: data[datalogIndex].readInt16BE(21 + k) / 10,
-      },
-    ]
-  };
-  MongoClient.connect(url, (err, client) => {
-    if (err) console.log(err.stack);
-    else console.log("Connected correctly to server");
-    const db = client.db(dbName);
-    db.collection('heaterRecords').insertOne(document).then((err) => {
-      if (err) throw (err);
-      if (err) throw (err);
-      targetHeater += 1;
-      if (targetHeater >= 4) {
-        targetHeater = 0;
-        datalogIndex += 1;
-      }
-      client.close();
-      if (datalogIndex >= data.length) {
-        datalogIndex = 0;
-        statusProcessed = false;
-        readingAndLoggingActive = false;
-        cb();
-        return;
-      }
-    }).then(processData())
-      .catch((err) => {throw (err);});
-    }
-  });
+  if (status[3]) {
+    console.log(data);
+    const k = 20 * targetHeater;
+    MongoClient.connect(url, (err, client) => {
+      const doc = {
+        heaterID: {
+          timestampID: moment().format('MMMM Do YYYY, h:mm:ss a'),
+          heaterNumber: 1 + datalogIndex + targetHeater,
+        },
+        dataLog: {
+          startData: {
+            startTime: childInfo[datalogIndex].readInt16BE(3 + k) / 100,
+            startTemp: childInfo[datalogIndex].readInt16BE(5 + k) / 10,
+          },
+          atSetpointData: {
+            atSetpointTime: childInfo[datalogIndex].readInt16BE(7 + k) / 100,
+            atSetpointTemp: childInfo[datalogIndex].readInt16BE(9 + k) / 10,
+          },
+          contactDipData: {
+            contactDipTime: childInfo[datalogIndex].readInt16BE(11 + k) / 100,
+            contactDipTemp: childInfo[datalogIndex].readInt16BE(13 + k) / 10,
+          },
+          shutoffData: {
+            shutoffTime: childInfo[datalogIndex].readInt16BE(15 + k) / 100,
+            shutoffTemp: childInfo[datalogIndex].readInt16BE(17 + k) / 10,
+          },
+          cycleCompleteData: {
+            cycleCompleteTime: childInfo[datalogIndex].readInt16BE(19 + k) / 100,
+            cycleCompleteTemp: childInfo[datalogIndex].readInt16BE(21 + k) / 10,
+          },
+        }
+      };
+      if (err) console.log(err.stack);
+      else console.log("Connected correctly to server");
+      const db = client.db(dbName);
+      db.collection('heaterRecords').insertOne(doc).then((err) => {
+        if (err) throw (err);
+        if (err) throw (err);
+        targetHeater += 1;
+        if (targetHeater >= 4) {
+          targetHeater = 0;
+          datalogIndex += 1;
+        }
+        client.close();
+        if (datalogIndex >= childInfo.length) {
+          datalogIndex = 0;
+          statusProcessed = false;
+          readingAndLoggingActive = false;
+          return cb();
+        }
+      }).then(processData())
+        .catch((err) => {throw (err);});
+    });
+  }
+  else {
+    console.log("processing done");
+    return cb(null, statuses);
+  }
 };
 
 // Setup Promise Function
@@ -243,11 +249,6 @@ function getAddresses() {
     populatingDatabase = false;
     console.log("setup done")
   });
-}
-
-// Boilerplate callback
-function cb(err) {
-  if (err) throw (err);
 }
 
 function isSystemInitialized() {

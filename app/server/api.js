@@ -96,8 +96,8 @@ app.post('/server/getLastCycle', (req, res) => {
     if (err) res.json({results: 'Failure to connect'});
     (async function () {
       let info = await db.collection("heaterRecords")
-        .find({ heaterID.heaterNumber: { $eq: 1 } })
-        .sort({heaterID.timestampID:-1}).limit(1);
+        .find({ "heaterID.heaterNumber": 1 })
+        .sort({"heaterID.timestampID":-1}).limit(1);
       res.json(info);
     })();
   });
@@ -106,37 +106,4 @@ app.post('/server/getLastCycle', (req, res) => {
 (err, results) => {
   if (err) res.json({results: 'Failure to find requested data'});
   else res.json(results);
-}
-
-app.post('/payload', (req, res) => {
-  //verify that the payload is a push from the correct repo
-  //verify repository.name == 'wackcoon-device' or repository.full_name = 'DanielEgan/wackcoon-device'
-  console.log(req.body.pusher.name + ' just pushed to ' + req.body.repository.name);
-
-  console.log('pulling code from GitHub...');
-
-  // reset any changes that have been made locally
-  exec('git -C /home/pi/LMP_Parent reset --hard', execCallback);
-
-  // and ditch any files that have been added locally too
-  exec('git -C /home/pi/LMP_Parent -df', execCallback);
-
-  // now pull down the latest
-  exec('git -C /home/pi/LMP_Parent pull -f', execCallback);
-
-  // and npm install with --production
-  exec('npm -C /home/pi/LMP_Parent install --production', execCallback);
-
-  // and run tsc
-  exec('tsc', execCallback);
-
-  res.sendStatus(200);
-  res.end();
-});
-
-
-
-function execCallback(err, stdout, stderr) {
-	if(stdout) console.log(stdout);
-	if(stderr) console.log(stderr);
 }

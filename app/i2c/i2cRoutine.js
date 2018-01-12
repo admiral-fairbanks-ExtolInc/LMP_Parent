@@ -83,12 +83,11 @@ function i2cHandling(settings) {
     console.log("read and log active, quitting");
     return;
   }
-  async.series([
+  async.waterfall([
   (cb) => {
     readingAndLoggingActive = true;
     let status = [startSigIn.Value, stopSigIn.Value,
       fullStrokeSigIn.Value, dataloggingInfo, calibrateRtd];
-    readingAndLoggingActive = true;
     // Broadcast out Status
     if (updatedSettings.meltTemp !== settings.meltTemp ||
       updatedSettings.releaseTemp !== settings.releaseTemp ||
@@ -110,34 +109,28 @@ function i2cHandling(settings) {
       broadcastBuffer.writeUInt16BE(updatedSettings.maxHeaterOnTime*10, 9);
       broadcastBuffer.writeUInt16BE(updatedSettings.dwellTime*10, 11);
       //console.log(broadcastBuffer);
-      Data.broadcastData(broadcastBuffer, cb);
+      Data.broadcastData(status, broadcastBuffer, cb);
     }
     else {
       let broadcastBuffer = Buffer.from(status);
-      Data.broadcastData(broadcastBuffer, cb);
+      Data.broadcastData(status, broadcastBuffer, cb);
     }
   },
-  (cb) => {
-    let status = [startSigIn.Value, stopSigIn.Value,
-    fullStrokeSigIn.Value, dataloggingInfo];
+  (status, cb) => {
     // Then, read data from each child controller
     Data.readData(status, cb);
   },
-  (cb) => {
+  (status, data, cb) => {
     // Then, process the data obtained from the children
     // storing any datalogging info
-    let status = [startSigIn.Value, stopSigIn.Value,
-    fullStrokeSigIn.Value, dataloggingInfo];
-    Data.processData(status, cb);
+    console.log("status before calling processData is: " + status);
+    Data.processData(status, data, cb);
   },
-  (cb) => {
+  (statuses, cb) => {
     // Set this flag false once complete so it can begin again on next interrupt
     readingAndLoggingActive = false;
 
-    childStatuses = Data.updateValue();
-    cb();
-  },
-  (cb) => {
+    childStatuses = statuses;
     // Checks if all modules are at setpoint. If so, Parent needs
     // to send out Extend Press signal
     extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
@@ -171,7 +164,7 @@ function i2cHandling(settings) {
       if (err) throw err;});
     lmpFltedPin.write(lmpFltedOut.Value, (err) => {
       if (err) throw err;});
-    cb();
+    cb(null);
   }]);
 }
 
@@ -213,11 +206,6 @@ function i2cIntervalTask(settings) {
     Data.setupLoop();
   }
 }
-
-// Boilerplate callback
-function cb(err) {
-  if (err) throw (err);
-};
 
 function engageRtdCalibration() {
   calibrateRtd = true;
