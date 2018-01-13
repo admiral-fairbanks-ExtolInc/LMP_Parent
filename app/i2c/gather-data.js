@@ -163,23 +163,23 @@ function processData(status, childInfo, cb) {
         },
         dataLog: {
           startData: {
-            startTime: childInfo[datalogIndex].readInt16BE(3 + k) / 100,
+            startTime: childInfo[datalogIndex].readInt16BE(3 + k),
             startTemp: childInfo[datalogIndex].readInt16BE(5 + k) / 10,
           },
           atSetpointData: {
-            atSetpointTime: childInfo[datalogIndex].readInt16BE(7 + k) / 100,
+            atSetpointTime: childInfo[datalogIndex].readInt16BE(7 + k),
             atSetpointTemp: childInfo[datalogIndex].readInt16BE(9 + k) / 10,
           },
           contactDipData: {
-            contactDipTime: childInfo[datalogIndex].readInt16BE(11 + k) / 100,
+            contactDipTime: childInfo[datalogIndex].readInt16BE(11 + k),
             contactDipTemp: childInfo[datalogIndex].readInt16BE(13 + k) / 10,
           },
           shutoffData: {
-            shutoffTime: childInfo[datalogIndex].readInt16BE(15 + k) / 100,
+            shutoffTime: childInfo[datalogIndex].readInt16BE(15 + k),
             shutoffTemp: childInfo[datalogIndex].readInt16BE(17 + k) / 10,
           },
           cycleCompleteData: {
-            cycleCompleteTime: childInfo[datalogIndex].readInt16BE(19 + k) / 100,
+            cycleCompleteTime: childInfo[datalogIndex].readInt16BE(19 + k),
             cycleCompleteTemp: childInfo[datalogIndex].readInt16BE(21 + k) / 10,
           },
         }

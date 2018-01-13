@@ -38,10 +38,13 @@ export default class HistoricalGraph extends Component {
   componentDidMount() {
     window.addEventListener('resize', this.handleResize);
     this.handleResize();
+    var intervalId = setInterval(this.updateData, 4000);
+    this.setState({intervalId: intervalId});
   }
 
   componentWillUnmount() {
     window.removeEventListener('resize', this.handleResize);
+    clearInterval(this.state.intervalId);
   }
 
   handleResize() {
@@ -75,22 +78,19 @@ export default class HistoricalGraph extends Component {
   }
 
   updateData() {
-    fetch('/server/getLastCycle', {
-      accept: 'application/json'
-    }).then((response) => {
-      if (response.status >= 200 && response.status < 500) {
-        return response;
-      }
-      const error = new Error(`HTTP Error ${response.statusText}`);
-      error.status = response.statusText;
-      error.response = response;
-      console.log(error); // eslint-disable-line no-console
-      throw error;
-    }).then((response) => {
-      return response.json();
-    }).then((res) => {
-      this.setState({
-        data: [
+    this.data.forEach((data) => {
+      fetch('/server/getLastCycle').then(function(response) {
+        if (response.status >= 200 && response.status < 300) {
+          return response;
+        }
+        const error = new Error(`HTTP Error ${response.statusText}`);
+        error.status = response.statusText;
+        error.response = response;
+        throw error;
+      }).then(function(response) {
+        return response.json();
+      }).then(function(res) {
+        data.push(
           {
             x:res.dataLog.startData.startTime,
             y:res.dataLog.startData.startTemp
@@ -111,10 +111,10 @@ export default class HistoricalGraph extends Component {
             x:res.dataLog.cycleCompleteData.cycleCompleteTime,
             y:res.dataLog.cycleCompleteData.cycleCompleteTemp
           },
-        ]
-      })
-    });
-
+        )
+        data.splice(0, 5);
+      });
+    })
     this.forceUpdate();
   }
 
@@ -162,7 +162,7 @@ export default class HistoricalGraph extends Component {
               data={this.data}
               width={this.state.componentWidth}
               height={this.state.componentWidth / 1.75}
-              interpolate={'cardinal'}
+
               yDomainRange={[0, 1000]}
               xDomainRange={[0, 35000]}
               axisLabels={{ x: 'Time (msec)', y: 'Temp (℉)' }}

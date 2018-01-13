@@ -166,6 +166,7 @@ function i2cHandling(settings) {
     // to send out Cooling Air signal
     if (childStatuses.every(elem => elem.coolingAirOn)) {
       coolingAirOut.Value = 1;
+      console.log("cooling air on");
     }
     else coolingAirOut.Value = 0;
     // Checks if all Modules are at Cycle Complete. If so,
@@ -202,7 +203,7 @@ function enableSigPinWatch(err, value) {
 
 function startSigPinWatch(err, value) {
   if (err) throw err;
-  if (value/* && enableSigIn.Value*/) startSigIn.Value = 1; //add enable sig back in later
+  if (value && enableSigIn.Value) startSigIn.Value = 1; //add enable sig back in later
   else startSigIn.Value = 0;
   console.log("start signal value is: " + startSigIn.Value);
 }

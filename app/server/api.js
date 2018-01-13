@@ -94,17 +94,15 @@ app.post('/server/calibrateRtd', (req, res) => {
   else res.json({results: 'Calibration Failed'});
 });
 
-app.post('/server/getLastCycle', (req, res) => {
-  console.log("history request recieved");
+app.get('/server/getLastCycle', (req, res) => {
   if (!req.body) return res.sendStatus(400);
   co(function*() {
     var db = yield MongoClient.connect(url);
-    console.log("querying database");
-    var coll = db.collection('heaterRecords');
-    var doc = coll.find({ "heaterID.heaterNumber": 1 })
-      .sort({"heaterID.timestampID":-1}).limit(1);
-    console.log(doc);
-    res.json(info);
+    var doc = yield db.collection('heaterRecords')
+      .find({ "heaterID.heaterNumber": 1 }) 
+      .sort({"heaterID.timestampID":-1}).limit(1)
+      .toArray();
+    res.json(doc[0]);
   })
 });
 

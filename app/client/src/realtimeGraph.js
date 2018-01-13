@@ -102,28 +102,25 @@ export default class RealtimeGraph extends Component {
     this.data.forEach((data) => {
       fetch('/server/tempInfo', {
         accept: 'application/json'
-      })
-        .then((response) => {
-          if (response.status >= 200 && response.status < 300) {
-            return response;
-          }
-          const error = new Error(`HTTP Error ${response.statusText}`);
-          error.status = response.statusText;
-          error.response = response;
-          console.log(error); // eslint-disable-line no-console
-          throw error;
-        })
-        .then((response) => {
-          return response.json();
-        })
-        .then((res) => {
-          data.shift();
-          let y = res.temp;
-          console.log(y);
-          const date = moment(parseDate(data[data.length - 1].x));
-          date.add(1, 'hour');
-          data.push({ x: date.format('D-MMM-YY HH:mm'), y });
-        });
+      }).then((response) => {
+        if (response.status >= 200 && response.status < 300) {
+          return response;
+        }
+        const error = new Error(`HTTP Error ${response.statusText}`);
+        error.status = response.statusText;
+        error.response = response;
+        console.log(error); // eslint-disable-line no-console
+        throw error;
+      }).then((response) => {
+        return response.json();
+      }).then((res) => {
+        data.shift();
+        let y = res.temp;
+        console.log(y);
+        const date = moment(parseDate(data[data.length - 1].x));
+        date.add(1, 'hour');
+        data.push({ x: date.format('D-MMM-YY HH:mm'), y });
+      });
     });
 
     this.forceUpdate();
