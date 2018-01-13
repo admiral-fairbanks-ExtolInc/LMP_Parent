@@ -78,7 +78,7 @@ export default class HistoricalGraph extends Component {
     fetch('/server/getLastCycle', {
       accept: 'application/json'
     }).then((response) => {
-      if (response.status >= 200 && response.status < 300) {
+      if (response.status >= 200 && response.status < 500) {
         return response;
       }
       const error = new Error(`HTTP Error ${response.statusText}`);

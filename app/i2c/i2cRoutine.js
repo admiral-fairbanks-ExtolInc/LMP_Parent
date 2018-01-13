@@ -161,7 +161,7 @@ function i2cHandling(settings) {
     // Checks if all modules are at setpoint. If so, Parent needs
     // to send out Extend Press signal
     extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
-    if (extendPressOut.Value) console.log("extend press true");
+    // if (extendPressOut.Value) console.log("extend press true");
     // Checks if all modules are at release. If so, Parent needs
     // to send out Cooling Air signal
     if (childStatuses.every(elem => elem.coolingAirOn)) {
@@ -202,7 +202,7 @@ function enableSigPinWatch(err, value) {
 
 function startSigPinWatch(err, value) {
   if (err) throw err;
-  if (value && enableSigIn.Value) startSigIn.Value = 1;
+  if (value/* && enableSigIn.Value*/) startSigIn.Value = 1; //add enable sig back in later
   else startSigIn.Value = 0;
   console.log("start signal value is: " + startSigIn.Value);
 }

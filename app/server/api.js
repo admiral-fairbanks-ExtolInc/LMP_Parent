@@ -9,6 +9,8 @@ const exec = require('child_process').exec;
 const app = express();
 const Gpio = require('onoff').Gpio;
 const MongoClient = require('mongodb').MongoClient;
+const co = require('co');
+const assert = require('assert');
 const enableSigPin = new Gpio(4, 'in', 'both');
 const startSigPin = new Gpio(5, 'in', 'both');
 const stopSigPin = new Gpio(6, 'in', 'both');
@@ -93,17 +95,17 @@ app.post('/server/calibrateRtd', (req, res) => {
 });
 
 app.post('/server/getLastCycle', (req, res) => {
+  console.log("history request recieved");
   if (!req.body) return res.sendStatus(400);
-  MongoClient.connect(url, (err, db) => {
-    if (err) res.json({results: 'Failure to connect'});
-    (async function () {
-      let info = await db.collection("heaterRecords")
-        .find({ "heaterID.heaterNumber": 1 })
-        .sort({"heaterID.timestampID":-1}).limit(1);
-      console.log(info);
-      res.json(info);
-    })();
-  });
+  co(function*() {
+    var db = yield MongoClient.connect(url);
+    console.log("querying database");
+    var coll = db.collection('heaterRecords');
+    var doc = coll.find({ "heaterID.heaterNumber": 1 })
+      .sort({"heaterID.timestampID":-1}).limit(1);
+    console.log(doc);
+    res.json(info);
+  })
 });
 
 (err, results) => {

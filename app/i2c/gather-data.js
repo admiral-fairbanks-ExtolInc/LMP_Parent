@@ -12,6 +12,8 @@ const expect = chai.expect;
 const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
 const _ = require('lodash');
+const co = require('co');
+const assert = require('assert');
 
 let childAddresses = [];
 let numHeaters = [1];
@@ -65,18 +67,20 @@ const individualData = {
 // Broadcasts data to all children
 function broadcastData(status, statusMessageBuffer, cb) {
   if (!_.isArrayLike(statusMessageBuffer) || !_.isFunction(cb)) {
-    throw new Error('broadcastData called with invalid args');
+    throw new Error('broadcastData called with invalid args line 66 gather-data');
   }
   readingAndLoggingActive = true;
-  i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
-  (err, bytesWritten, buffer) => {
-    if (err) {
-      console.log(err);
-      console.log("error at line 75, gather-data");
-      return cb(null, status);
-    }
-    cb(null, status);
-  });
+  async.retry({times:5, interval:5}, (callback, res) => {
+    i2c1.i2cWrite(0, statusMessageBuffer.byteLength, statusMessageBuffer,
+    (err, bytesWritten, buffer) => {
+      if (err) {
+        console.log(err);
+        console.log("error at line 75, gather-data, trying again");
+        return callback("Error broadcasting data", null);
+      }
+      callback(null, status);
+    });
+  }, cb)
 };
 
 // Reads data obtained from all children
@@ -92,18 +96,20 @@ function readData(status, cb) {
   else readLength = 23; // same
   let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb2) => {
-    i2c1.i2cRead(item, readLength, tempBuff,
-      (err, bytesRead, buffer) => {
-      if (err) {
-        console.log(err);
-        console.log(buffer);
-        return cb2(null, childInfo);
-      }
-      tempBuff = buffer;
-      childInfo[key] = tempBuff;
-      //console.log(childInfo);
-      return cb2();
-    })
+    async.retry({times:5, interval:5}, (callback, res) => {
+      i2c1.i2cRead(item, readLength, tempBuff,
+        (err, bytesRead, buffer) => {
+        if (err) {
+          console.log(err);
+          console.log(buffer);
+          return callback(null, childInfo);
+        }
+        tempBuff = buffer;
+        childInfo[key] = tempBuff;
+        //console.log(childInfo);
+        return callback(null);
+      })
+    }, cb2);
   },
   (err) => {
     if (err) console.log("Error while reading");
@@ -146,7 +152,10 @@ function processData(status, childInfo, cb) {
   }
   if (status[3]) {
     const k = 20 * targetHeater;
-    MongoClient.connect(url, (err, client) => {
+    co(function*() {
+      const db = yield MongoClient.connect(url);
+      console.log("Connected correctly to server");
+
       const doc = {
         heaterID: {
           timestampID: moment().format('MMMM Do YYYY, h:mm:ss a'),
@@ -175,36 +184,32 @@ function processData(status, childInfo, cb) {
           },
         }
       };
-      if (err) console.log(err.stack);
-      else console.log("Connected correctly to server");
-      const db = client.db(dbName);
-      Promise.resolve()
-      .then(() => {
-         db.collection('heaterRecords').insertOne(doc)
-      }).then((err) => {
-        if (err) throw (err);
-        targetHeater += 1;
-        console.log("target heater is: " + targetHeater);
-        if (targetHeater >= numHeaters[datalogIndex]) {
-          targetHeater = 0;
-          datalogIndex += 1;
-          console.log("datalog index is: " + datalogIndex);
-        }
-        client.close();
-        if (datalogIndex >= childInfo.length) {
-          datalogIndex = 0;
-          statusProcessed = false;
-          readingAndLoggingActive = false;
-          console.log("db process done");
-          return cb(null, statuses);
-        }
-        else {
-          console.log("I happened again")
-          processData();
-        }
-      }).catch((err) => {
-        console.log(err);
-      })
+      const r = yield db.collection('heaterRecords').insertOne(doc);
+      assert.equal(1, r.insertedCount);
+      console.log(r.insertedCount);
+      db.close();
+    }).then((err) => {
+      if (err) throw (err);
+      targetHeater += 1;
+      console.log("target heater is: " + targetHeater);
+      if (targetHeater >= numHeaters[datalogIndex]) {
+        targetHeater = 0;
+        datalogIndex += 1;
+        console.log("datalog index is: " + datalogIndex);
+      }
+      if (datalogIndex >= childInfo.length) {
+        datalogIndex = 0;
+        statusProcessed = false;
+        readingAndLoggingActive = false;
+        console.log("db process done");
+        return cb(null, statuses);
+      }
+      else {
+        console.log("I happened again")
+        processData();
+      }
+    }).catch((err) => {
+      console.log(err);
     });
   }
   else {
