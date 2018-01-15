@@ -9,6 +9,7 @@ const exec = require('child_process').exec;
 const app = express();
 const Gpio = require('onoff').Gpio;
 const MongoClient = require('mongodb').MongoClient;
+const enableSigPin = new Gpio(4, 'in', 'both');
 const startSigPin = new Gpio(5, 'in', 'both');
 const stopSigPin = new Gpio(6, 'in', 'both');
 const fullStrokePin = new Gpio(12, 'in', 'both');
@@ -26,6 +27,7 @@ let childStatuses;
 const i2cTmr = setInterval(function() {
   i2c.i2cIntervalTask(childSettings); }, 750);
 
+enableSigPin.watch(i2c.enableSigPinWatch);
 startSigPin.watch(i2c.startSigPinWatch);
 stopSigPin.watch(i2c.stopSigPinWatch);
 fullStrokePin.watch(i2c.FSSigPinWatch);
@@ -98,6 +100,7 @@ app.post('/server/getLastCycle', (req, res) => {
       let info = await db.collection("heaterRecords")
         .find({ "heaterID.heaterNumber": 1 })
         .sort({"heaterID.timestampID":-1}).limit(1);
+      console.log(info);
       res.json(info);
     })();
   });
