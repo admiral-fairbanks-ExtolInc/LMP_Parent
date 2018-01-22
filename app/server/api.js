@@ -27,7 +27,7 @@ let count = 0;
 let childStatuses;
 
 const i2cTmr = setInterval(function() {
-  i2c.i2cIntervalTask(childSettings); }, 750);
+  i2c.i2cIntervalTask(childSettings); }, 250);
 
 enableSigPin.watch(i2c.enableSigPinWatch);
 startSigPin.watch(i2c.startSigPinWatch);

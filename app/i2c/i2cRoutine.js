@@ -9,7 +9,7 @@ const async = require('async');
 const MongoClient = Promise.promisifyAll(require('mongodb').MongoClient);
 
 const digIn = [4, 5, 6, 12];
-const digOut = [18, 19, 20, 21, 22];
+const digOut = [17, 19, 20, 21, 22];
 const enableSigIn = {
   Value: 0,
   Pin: digIn[0],
@@ -61,7 +61,7 @@ const app = express();
 // IO Configuration
 const enableSigPin = new Gpio(4, 'in', 'both');
 const coolingAirPin = new Gpio(18, 'out');
-const runningPin = new Gpio(19, 'out')
+const runningPin = new Gpio(19, 'out');
 const extendPressPin = new Gpio(20, 'out');
 const cycleCompletePin = new Gpio(21, 'out');
 const lmpFltedPin = new Gpio(22, 'out');
@@ -91,7 +91,7 @@ function readyForLogging() {
 
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
-function i2cHandling(settings) {
+function i2cHandling(settings, done) {
   if (readingAndLoggingActive) {
     console.log("read and log active, quitting");
     return;
@@ -151,6 +151,7 @@ function i2cHandling(settings) {
     Data.processData(status, data, cb);
   },
   (statuses, cb) => {
+    coolingAirPin.writeSync(1);
     // Set this flag false once complete so it can begin again on next interrupt
     readingAndLoggingActive = false;
 
@@ -166,9 +167,10 @@ function i2cHandling(settings) {
     // to send out Cooling Air signal
     if (childStatuses.every(elem => elem.coolingAirOn)) {
       coolingAirOut.Value = 1;
-      console.log("cooling air on");
     }
-    else coolingAirOut.Value = 0;
+    else {
+      coolingAirOut.Value = 0;
+    }
     // Checks if all Modules are at Cycle Complete. If so,
     // Parent needs to send out Cycle Complete Signal
     cycleCompleteOut.Value = childStatuses.every(elem => elem.cycleDatalogged);
@@ -176,18 +178,41 @@ function i2cHandling(settings) {
     // Checks to see if any modules are faulted. If so, Parent
     // needs to send out LMP Faulted signal
     lmpFltedOut.Value = childStatuses.some(elem => elem.heaterFaulted);
-    runningPin.write(cycleRunningOut.Value, (err) => {
-      if (err) throw err;});
-    extendPressPin.write(extendPressOut.Value, (err) => {
-      if (err) throw err;});
-    coolingAirPin.write(coolingAirOut.Value, (err) => {
-      if (err) throw err;});
-    cycleCompletePin.write(cycleCompleteOut.Value, (err) => {
-      if (err) throw err;});
-    lmpFltedPin.write(lmpFltedOut.Value, (err) => {
-      if (err) throw err;});
-    cb(null);
-  }]);
+    async.series([
+      (cb2) => {
+        coolingAirPin.write(coolingAirOut.Value, (err) => {
+          cb2(err);
+        });
+      },
+      (cb2) => {
+        runningPin.write(cycleRunningOut.Value, (err) => {
+          cb2(err);
+        });
+      },
+      (cb2) => {
+        extendPressPin.write(extendPressOut.Value, (err) => {
+          cb2(err);
+        });
+      },
+      (cb2) => {
+        cycleCompletePin.write(cycleCompleteOut.Value, (err) => {
+          cb2(err);
+        });
+      },
+      (cb2) => {
+        lmpFltedPin.write(lmpFltedOut.Value, (err) => {
+          cb2(err);
+        });
+      },
+    ], (err) => {
+      cb(err);
+    });
+    
+  }], (err) => {
+    if (done) {
+      done(err);
+    }
+  });
 }
 
 function getChildInfo() {
