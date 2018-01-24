@@ -77,6 +77,9 @@ let logRequestSent;
 let heatersMapped;
 let systemInitialized = false;
 let systemInitInProgress = false;
+let cycleStartSent = false;
+let cycleStart = false;
+let cycleStop = false;
 let updatedSettings = {
   meltTemp: 550,
   releaseTemp: 120,
@@ -96,6 +99,14 @@ function i2cHandling(settings, done) {
     console.log("read and log active, quitting");
     return;
   }
+  if (startSigIn.Value && !cycleStartSent) {
+    cycleStartSent = true;
+    cycleStart = true;
+  }
+  else cycleStart = false;
+  if (stopSigIn.Value || !enableSigIn.Value) cycleStop = true;
+  else cycleStop = false;
+cycleRunningOut
   async.waterfall([
   (cb) => {
     readingAndLoggingActive = true;
@@ -107,7 +118,7 @@ function i2cHandling(settings, done) {
     else if (!cycleCompleteOut.Value && logRequestSent) {
       logRequestSent = false;
     }
-    let status = [startSigIn.Value, stopSigIn.Value,
+    let status = [cycleStart, cycleStop,
       fullStrokeSigIn.Value, dataloggingInfo, calibrateRtd];
     // Broadcast out Status
     if (updatedSettings.meltTemp !== settings.meltTemp ||
@@ -151,18 +162,23 @@ function i2cHandling(settings, done) {
     Data.processData(status, data, cb);
   },
   (statuses, cb) => {
-    coolingAirPin.writeSync(1);
     // Set this flag false once complete so it can begin again on next interrupt
     readingAndLoggingActive = false;
-
     childStatuses = statuses;
     //  Checks to see if start signal was recieved. If so, Parent
     // sends out Running signal
-    cycleRunningOut.Value = startSigIn.Value;
+    if (startSigIn.Value && !cycleCompleteOut.Value && !lmpFltedOut.Value) {
+      cycleRunningOut.Value = 1;
+    }
+    else cycleRunningOut.Value = 0;
     // Checks if all modules are at setpoint. If so, Parent needs
     // to send out Extend Press signal
-    extendPressOut.Value = childStatuses.every(elem => elem.heaterAtSetpoint);
-    // if (extendPressOut.Value) console.log("extend press true");
+    if (childStatuses.every(elem => elem.heaterAtSetpoint)) {
+      extendPressOut.Value = 1;
+    }
+    else {
+      extendPressOut.Value = 0;
+    }
     // Checks if all modules are at release. If so, Parent needs
     // to send out Cooling Air signal
     if (childStatuses.every(elem => elem.coolingAirOn)) {
@@ -173,11 +189,21 @@ function i2cHandling(settings, done) {
     }
     // Checks if all Modules are at Cycle Complete. If so,
     // Parent needs to send out Cycle Complete Signal
-    cycleCompleteOut.Value = childStatuses.every(elem => elem.cycleDatalogged);
+    if (childStatuses.every(elem => elem.cycleDatalogged)) {
+      cycleCompleteOut.Value = 1;
+    }
+    else {
+      cycleCompleteOut.Value = 0;
+    }
     if (calibrateRtd) calibrateRtd = false;
     // Checks to see if any modules are faulted. If so, Parent
     // needs to send out LMP Faulted signal
-    lmpFltedOut.Value = childStatuses.some(elem => elem.heaterFaulted);
+    if (childStatuses.some(elem => elem.heaterFaulted)) {
+      lmpFltedOut.Value = 1;
+    }
+    else {
+      lmpFltedOut.Value = 0;
+    }
     async.series([
       (cb2) => {
         coolingAirPin.write(coolingAirOut.Value, (err) => {
@@ -223,13 +249,18 @@ function getChildInfo() {
 function enableSigPinWatch(err, value) {
   if (err) throw err;
   if (value) enableSigIn.Value = 1;
-  else enableSigIn.Value = 0;
+  else {
+    enableSigIn.Value = 0;
+  }
 }
 
 function startSigPinWatch(err, value) {
   if (err) throw err;
   if (value && enableSigIn.Value) startSigIn.Value = 1; //add enable sig back in later
-  else startSigIn.Value = 0;
+  else {
+    cycleStartSent = false;
+    startSigIn.Value = 0;
+  }
   console.log("start signal value is: " + startSigIn.Value);
 }
 
@@ -264,6 +295,10 @@ function i2cIntervalTask(settings) {
   }
 }
 
+function getRunningStatus() {
+  return cycleRunningOut.Value;
+}
+
 function engageRtdCalibration() {
   calibrateRtd = true;
   console.log(calibrateRtd);
@@ -280,4 +315,5 @@ module.exports = {
   startSigPinWatch: startSigPinWatch,
   stopSigPinWatch: stopSigPinWatch,
   FSSigPinWatch: FSSigPinWatch,
+  getRunningStatus: getRunningStatus,
 };

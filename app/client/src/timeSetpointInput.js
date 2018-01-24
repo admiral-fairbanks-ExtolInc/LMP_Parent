@@ -5,8 +5,6 @@ import { InputGroup,
   Input,
   Button
 } from 'reactstrap';
-import InputWithKeyboard from './keyboardInput.js';
-import '../node_modules/react-touch-screen-keyboard/lib/Keyboard.css';
 import NumPad from 'react-numpad';
 const Axios = require('axios');
 
@@ -61,7 +59,9 @@ export default class SetpointInput extends React.Component {
             onChange={(value) => { this.handleValueChange(value); }}
             placeholder={boilerplate}
             theme={'orange'}
-          />
+          >
+            <Input />
+          </NumPad.PositiveIntegerNumber>
           <InputGroupAddon>Sec</InputGroupAddon>
         </InputGroup>
       </div>

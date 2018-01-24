@@ -22,7 +22,7 @@ const childSettings = {
   dwellTime: 0,
 };
 const url = "mongodb://localhost:27017/mydb";
-
+const heaterHiLim = 1000;
 let count = 0;
 let childStatuses;
 
@@ -62,28 +62,51 @@ app.post('/server/updateSetpoint', (req, res) => {
   if (!req.body) return res.sendStatus(400);
   let change = req.body;
   let success;
+  let cycleRunning =  i2c.getRunningStatus();
+  if (cycleRunning) return res.json({results: 'Unsuccessful'});
   if (change.title === 'Heater Melt Temp Setpoint') {
-    childSettings.meltTemp = parseInt(change.value);
-    res.json({results: 'Success'});
+    let proposedSetting = parseInt(change.value);
+    if (proposedSetting < 1000 && proposedSetting > 0) {
+      childSettings.meltTemp = proposedSetting;
+      res.json({results: 'Success'});
+    }
+    else res.json({results: 'New Setpoint Outside of Allowable Range'});
   }
   else if (change.title === 'Heater Release Temp Setpoint') {
-    childSettings.releaseTemp = parseInt(change.value);
-    res.json({results: 'Success'});
+    let proposedSetting = parseInt(change.value);
+    if (proposedSetting < heaterHiLim && proposedSetting > 0 && 
+      proposedSetting < childSettings.meltTemp) {
+      childSettings.releaseTemp = proposedSetting;
+      res.json({results: 'Success'});
+    }
+    else res.json({results: 'New Setpoint Outside of Allowable Range'});
   }
   else if (change.title === 'Heater Maximum On Time') {
-    childSettings.maxHeaterOnTime = parseInt(change.value);
-    res.json({results: 'Success'});
+    let proposedSetting = parseInt(change.value);
+    if (proposedSetting < 30 && proposedSetting > 0) {
+      childSettings.maxHeaterOnTime = proposedSetting;
+      res.json({results: 'Success'});
+    }
+    else res.json({results: 'New Setpoint Outside of Allowable Range'});
   }
   else if (change.title === 'Heater Dwell Time') {
+    let proposedSetting = parseInt(change.value);
+    if (proposedSetting < 30 && proposedSetting > 0 && 
+      proposedSetting < childSettings.maxHeaterOnTime) {
+      childSettings.dwellTime = proposedSetting;
+      res.json({results: 'Success'});
+    }
+    else res.json({results: 'New Setpoint Outside of Allowable Range'});
     childSettings.dwellTime = parseInt(change.value);
     res.json({results: 'Success'});
   }
   else res.json({results: 'Invalid Settings Change'})
-
 });
 
 app.post('/server/calibrateRtd', (req, res) => {
   if (!req.body) return res.sendStatus(400);
+  let cycleRunning =  i2c.getRunningStatus();
+  if (cycleRunning) return res.json({results: 'Unsuccessful'});
   let change = req.body;
   let success;
   if (change.title === 'Calibrate RTD') {

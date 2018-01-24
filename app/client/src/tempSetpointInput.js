@@ -56,7 +56,9 @@ export default class TempInput extends React.Component {
             onChange={(value) => { this.handleValueChange(value); }}
             placeholder={boilerplate}
             theme={'orange'}
-          />
+          >
+            <Input />
+          </NumPad.PositiveIntegerNumber>
           <InputGroupAddon>℉</InputGroupAddon>
         </InputGroup>
       </div>

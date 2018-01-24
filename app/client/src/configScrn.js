@@ -16,24 +16,24 @@ class ConfigScreen extends Component {
             <h2>Input desired setpoint and press Submit</h2>
           )}/>
         <Row>
-          <Col>
+          <Col xs="6">
             <Route path='/config' render={(props) => (
                 <TempInput type={this.props.types[0]} />
               )}/>
           </Col>
-          <Col>
+          <Col xs="6">
             <Route path='/config' render={(props) => (
                 <TempInput type={this.props.types[1]} />
               )}/>
           </Col>
         </Row>
         <Row>
-          <Col>
+          <Col xs="6">
             <Route path='/config' render={(props) => (
                 <SetpointInput type={this.props.types[2]} />
               )}/>
           </Col>
-          <Col>
+          <Col xs="6">
             <Route path='/config' render={(props) => (
                 <SetpointInput type={this.props.types[3]} />
               )}/>
