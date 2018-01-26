@@ -1,17 +1,11 @@
 import React from 'react';
-import { InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  Input,
-  Button,
-  Col
-} from 'reactstrap';
-import InputWithKeyboard from './keyboardInput.js';
-import '../node_modules/react-touch-screen-keyboard/lib/Keyboard.css';
+import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
+import KeyboardedInput from 'react-touch-screen-keyboard';
+import './Keyboard.css';
 import NumPad from 'react-numpad';
 const Axios = require('axios');
 
-export default class SetpointInput extends React.Component {
+export default class TempInputField extends React.Component {
   constructor(props) {
     super(props);
 
@@ -54,15 +48,17 @@ export default class SetpointInput extends React.Component {
   render() {
     let { title, boilerplate } = this.props.type;
     return (
-      <Col>
-        {title}
-        <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
-        <NumPad.PositiveIntegerNumber
-          onChange={(value) => { this.handleValueChange(value); }}
-          placeholder={boilerplate}
-          theme={'orange'}
-        />
-      </Col>
+      <div>
+        <h4>{title}</h4>
+        <InputGroup size='lg'>
+          <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
+          <Input
+            onChange={(value) => { this.handleValueChange(value); }}
+            placeholder={boilerplate}
+          />
+          <InputGroupAddon>℉</InputGroupAddon>
+        </InputGroup>
+      </div>
     );
   }
 }

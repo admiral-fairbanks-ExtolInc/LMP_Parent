@@ -1,5 +1,5 @@
 import React from 'react';
-import { InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
+import { Row, Col, InputGroup, InputGroupAddon, InputGroupButton, Input, Button } from 'reactstrap';
 import KeyboardedInput from 'react-touch-screen-keyboard';
 import './Keyboard.css';
 import NumPad from 'react-numpad';
@@ -10,34 +10,30 @@ export default class TempInput extends React.Component {
     super(props);
 
     this.state = {
-      value: 0
+      values: [0, 0, 0, 0]
     }
-    this.updateValue = this.updateValue.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
     this.handleValueChange = this.handleValueChange.bind(this);
   }
 
-  updateValue(event) {
-    this.setState({value: event.target.value});
+  handleValueChange(val, ind) {
+    let v = this.state.values.slice();
+    v[ind] = val;
+    this.setState({values: v});
   }
 
-  handleValueChange(val) {
-    this.setState({ value: val });
-  }
-
-  handleSubmit(event) {
+  handleSetpointChange(ind) {
     Axios({
       method: 'post',
       url: '/server/updateSetpoint',
       data: {
-        title: this.props.type.title,
-        value: this.state.value
+        title: this.props.types[ind].title,
+        value: this.state.values[ind]
       }
     })
       .then((res) => {
         if(res.data.results === 'Success') {
-          alert(this.props.type.title +
-            ' was changed. New value: ' + this.state.value);
+          alert(this.props.types[ind].title +
+            ' was changed. New value: ' + this.state.values[ind]);
         }
         else {
           alert('Setpoint Change Unsuccessful. Please try again.');
@@ -46,21 +42,40 @@ export default class TempInput extends React.Component {
   }
 
   render() {
-    let { title, boilerplate } = this.props.type;
     return (
       <div>
-        <h4>{title}</h4>
-        <InputGroup size='lg'>
-          <InputGroupButton onClick={this.handleSubmit}><Button>Submit</Button></InputGroupButton>
-          <NumPad.PositiveIntegerNumber
-            onChange={(value) => { this.handleValueChange(value); }}
-            placeholder={boilerplate}
-            theme={'orange'}
-          >
-            <Input />
-          </NumPad.PositiveIntegerNumber>
-          <InputGroupAddon>℉</InputGroupAddon>
-        </InputGroup>
+        <Row>
+          <Col>
+            <NumPad.PositiveIntegerNumber
+              onChange={(value) => { this.handleValueChange(value, 0); }}
+              placeholder={this.props.types[0].boilerplate}
+              theme={'orange'}
+              label={this.props.types[0].title}
+            />
+            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 0)}><Button>Submit</Button></InputGroupButton>
+            <NumPad.PositiveIntegerNumber
+              onChange={(value) => { this.handleValueChange(value, 1); }}
+              placeholder={this.props.types[1].boilerplate}
+              theme={'orange'}
+              label={this.props.types[1].title}
+            />
+            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 1)}><Button>Submit</Button></InputGroupButton>
+            <NumPad.PositiveIntegerNumber
+              onChange={(value) => { this.handleValueChange(value, 2); }}
+              placeholder={this.props.types[2].boilerplate}
+              theme={'orange'}
+              label={this.props.types[2].title}
+            />
+            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 2)}><Button>Submit</Button></InputGroupButton>
+            <NumPad.PositiveIntegerNumber
+              onChange={(value) => { this.handleValueChange(value, 3); }}
+              placeholder={this.props.types[3].boilerplate}
+              theme={'orange'}
+              label={this.props.types[3].title}
+            />
+            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 3)}><Button>Submit</Button></InputGroupButton>
+          </Col>
+        </Row>
       </div>
     );
   }

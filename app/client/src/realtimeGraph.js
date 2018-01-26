@@ -173,7 +173,6 @@ export default class RealtimeGraph extends Component {
               datePattern={'%d-%b-%y %H:%M'}
               width={this.state.componentWidth}
               height={this.state.componentWidth / 1.75}
-              interpolate={'cardinal'}
               yDomainRange={[0, 1000]}
               axisLabels={{ x: 'Now', y: 'Temp (℉)' }}
               axes

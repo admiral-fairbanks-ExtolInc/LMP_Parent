@@ -113,6 +113,7 @@ export default class HistoricalGraph extends Component {
           },
         )
         data.splice(0, 5);
+        alert(data[4].x)
       });
     })
     this.forceUpdate();

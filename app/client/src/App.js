@@ -53,8 +53,8 @@ class App extends Component {
             <Route path='/config' render={(props) => (
                 <ConfigScreen types={this.state.types} />
             )}/>
-          <Route exact path="/" component={RealtimeGraph}/>
-          <Route exact path="/datalog" component={HistoricalGraph}/>
+            <Route exact path="/" component={RealtimeGraph}/>
+            <Route exact path="/datalog" component={HistoricalGraph}/>
           </Switch>
         </Container>
       </div>

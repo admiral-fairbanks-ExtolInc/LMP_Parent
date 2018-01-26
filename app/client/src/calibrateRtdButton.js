@@ -31,7 +31,7 @@ export default class CalibrateRTDButton extends React.Component {
     let { title } = this.props.type;
     return (
       <div>
-        <h4>{title}</h4>
+        {title}
         <Button onClick={this.handleClick} size='250'>Press To Calibrate</Button>
       </div>
     );

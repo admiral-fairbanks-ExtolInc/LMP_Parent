@@ -184,6 +184,7 @@ function processData(status, childInfo, cb) {
           },
         }
       };
+      console.log(doc);
       const r = yield db.collection('heaterRecords').insertOne(doc);
       assert.equal(1, r.insertedCount);
       console.log(r.insertedCount);
