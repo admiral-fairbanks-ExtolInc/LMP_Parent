@@ -155,10 +155,10 @@ function processData(status, childInfo, cb) {
     co(function*() {
       const db = yield MongoClient.connect(url);
       console.log("Connected correctly to server");
-
+      //const gone = yield db.collection('heaterRecords').deleteMany({});
       const doc = {
         heaterID: {
-          timestampID: moment().format('MMMM Do YYYY, h:mm:ss a'),
+          timestampID: new Date(),
           heaterNumber: 1 + datalogIndex + targetHeater,
         },
         dataLog: {

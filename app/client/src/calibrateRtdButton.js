@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from 'reactstrap';
+import { Row, Col, Button } from 'reactstrap';
 const Axios = require('axios');
 
 export default class CalibrateRTDButton extends React.Component {
@@ -30,10 +30,11 @@ export default class CalibrateRTDButton extends React.Component {
   render() {
     let { title } = this.props.type;
     return (
-      <div>
-        {title}
-        <Button onClick={this.handleClick} size='250'>Press To Calibrate</Button>
-      </div>
+      <Row>
+        <Col>
+          <Button onClick={this.handleClick} size='250'>Calibrate RTD</Button>
+        </Col>
+      </Row>
     );
   }
 }

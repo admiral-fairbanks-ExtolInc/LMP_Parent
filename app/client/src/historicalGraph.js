@@ -20,11 +20,11 @@ export default class HistoricalGraph extends Component {
     this.toggleState = this.toggleState.bind(this);
 
     this.data = [
-      [{x:0, y: 70},
-      {x:1000, y:550},
-      {x:4000, y:525},
-      {x:20000, y:550},
-      {x:28000, y: 120}]
+      [{x:0, y: 0},
+      {x:0, y:0},
+      {x:0, y:0},
+      {x:0, y:0},
+      {x:0, y: 0}]
     ];
 
     const initialWidth = window.innerWidth > 0 ? window.innerWidth : 500;
@@ -38,6 +38,7 @@ export default class HistoricalGraph extends Component {
   componentDidMount() {
     window.addEventListener('resize', this.handleResize);
     this.handleResize();
+    this.updateData();
     var intervalId = setInterval(this.updateData, 4000);
     this.setState({intervalId: intervalId});
   }
@@ -113,7 +114,6 @@ export default class HistoricalGraph extends Component {
           },
         )
         data.splice(0, 5);
-        alert(data[4].x)
       });
     })
     this.forceUpdate();
@@ -153,19 +153,12 @@ export default class HistoricalGraph extends Component {
         <br />
         <Row>
           <Col xs='12'>
-            <Button color="success" onClick={this.updateData}>Gather Previous Cycle Data</Button>
-          </Col>
-        </Row>
-        <br />
-        <Row>
-          <Col xs='12'>
             <LineChart
               data={this.data}
               width={this.state.componentWidth}
               height={this.state.componentWidth / 1.75}
 
               yDomainRange={[0, 1000]}
-              xDomainRange={[0, 35000]}
               axisLabels={{ x: 'Time (msec)', y: 'Temp (℉)' }}
               axes
               grid

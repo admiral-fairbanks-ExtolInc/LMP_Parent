@@ -2,6 +2,7 @@ import React from 'react';
 import { Collapse, Navbar, NavbarToggler, NavbarBrand, Nav, NavItem, NavLink as NavLinkRS } from 'reactstrap';
 import {
   BrowserRouter as Router,
+  Link
 } from 'react-router-dom';
 
 export default class LmpNav extends React.Component {
@@ -29,19 +30,13 @@ export default class LmpNav extends React.Component {
               <Router>
                 <div>
                   <NavItem>
-                    <NavLinkRS href="/">Home</NavLinkRS>
+                    <NavLinkRS href='/'>Home</NavLinkRS>
                   </NavItem>
                   <NavItem>
-                    <NavLinkRS href="/config">Setpoint Page</NavLinkRS>
+                    <NavLinkRS href='/config'>Settings</NavLinkRS>
                   </NavItem>
                   <NavItem>
-                    <NavLinkRS href="/datalog">Trends and Historical Data</NavLinkRS>
-                  </NavItem>
-                  <NavItem>
-                    <NavLinkRS href="https://github.com/admiral-fairbanks-ExtolInc/LMP_Parent">LMP Parent Github Repo</NavLinkRS>
-                  </NavItem>
-                  <NavItem>
-                    <NavLinkRS href="https://github.com/admiral-fairbanks-ExtolInc/LMP_Child">LMP Child Github Repo</NavLinkRS>
+                    <NavLinkRS href='/datalog'>Process Monitoring</NavLinkRS>
                   </NavItem>
                 </div>
               </Router>

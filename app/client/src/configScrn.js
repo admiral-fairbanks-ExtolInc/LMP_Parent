@@ -12,9 +12,9 @@ class ConfigScreen extends Component {
   render () {
     return (
       <div>
-        <CalibrateRTDButton type={this.props.types[4]} />
-        <br />
         <TempInput types={this.props.types} />
+        <br />
+        <CalibrateRTDButton type={this.props.types[4]} />
       </div>
     )
   }

@@ -3,6 +3,7 @@ import { Row, Col, InputGroup, InputGroupAddon, InputGroupButton, Input, Button 
 import KeyboardedInput from 'react-touch-screen-keyboard';
 import './Keyboard.css';
 import NumPad from 'react-numpad';
+import mobiscroll from '/home/pi/LMP_Parent/app/client/node_modules/@mobiscroll/react/dist/js/mobiscroll.react.min.js';
 const Axios = require('axios');
 
 export default class TempInput extends React.Component {
@@ -19,23 +20,16 @@ export default class TempInput extends React.Component {
     let v = this.state.values.slice();
     v[ind] = val;
     this.setState({values: v});
-  }
-
-  handleSetpointChange(ind) {
     Axios({
       method: 'post',
       url: '/server/updateSetpoint',
       data: {
         title: this.props.types[ind].title,
-        value: this.state.values[ind]
+        value: val
       }
     })
       .then((res) => {
-        if(res.data.results === 'Success') {
-          alert(this.props.types[ind].title +
-            ' was changed. New value: ' + this.state.values[ind]);
-        }
-        else {
+        if(res.data.results !== 'Success') {
           alert('Setpoint Change Unsuccessful. Please try again.');
         }
       })
@@ -44,36 +38,46 @@ export default class TempInput extends React.Component {
   render() {
     return (
       <div>
+        <br />
         <Row>
           <Col>
-            <NumPad.PositiveIntegerNumber
-              onChange={(value) => { this.handleValueChange(value, 0); }}
-              placeholder={this.props.types[0].boilerplate}
-              theme={'orange'}
-              label={this.props.types[0].title}
-            />
-            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 0)}><Button>Submit</Button></InputGroupButton>
-            <NumPad.PositiveIntegerNumber
-              onChange={(value) => { this.handleValueChange(value, 1); }}
-              placeholder={this.props.types[1].boilerplate}
-              theme={'orange'}
-              label={this.props.types[1].title}
-            />
-            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 1)}><Button>Submit</Button></InputGroupButton>
-            <NumPad.PositiveIntegerNumber
-              onChange={(value) => { this.handleValueChange(value, 2); }}
-              placeholder={this.props.types[2].boilerplate}
-              theme={'orange'}
-              label={this.props.types[2].title}
-            />
-            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 2)}><Button>Submit</Button></InputGroupButton>
-            <NumPad.PositiveIntegerNumber
-              onChange={(value) => { this.handleValueChange(value, 3); }}
-              placeholder={this.props.types[3].boilerplate}
-              theme={'orange'}
-              label={this.props.types[3].title}
-            />
-            <InputGroupButton onClick={this.handleSetpointChange.bind(this, 3)}><Button>Submit</Button></InputGroupButton>
+            <h5>Melt Temp</h5>
+            <mobiscroll.Numpad 
+              onSet={(event, inst) => { this.handleValueChange(event.valueText, 0); }}
+              preset='decimal' scale={0} min={250} max={1000}
+              theme='material-dark' animate='fade'
+              headerText='Enter New Setpoint, Min: 250, Max: 1000'/>
+            <h6>Min: 250, Max: 1000</h6>
+          </Col>
+          <Col>
+            <h5>Release Temp</h5>
+            <mobiscroll.Numpad 
+              onSet={(event, inst) => { this.handleValueChange(event.valueText, 1); }}
+              preset='decimal' scale={0} min={100} max={1000}
+              theme='material-dark' animate='fade'
+              headerText='Enter New Setpoint, Min: 100, Max: 1000'/>
+            <h6>Min: 100, Max: 1000</h6>
+          </Col>
+        </Row>
+        <br />
+        <Row>
+          <Col>
+            <h5>Dwell Time</h5>
+            <mobiscroll.Numpad 
+              onSet={(event, inst) => { this.handleValueChange(event.valueText, 3); }}
+              preset='decimal' scale={0} min={0} max={15}
+              theme='material-dark' animate='fade'
+              headerText='Enter New Setpoint, Min: 0, Max: 15'/>
+            <h6>Min: 0, Max: 15</h6>
+          </Col>
+          <Col>
+            <h5>Max Cycle Time</h5>
+            <mobiscroll.Numpad 
+              onSet={(event, inst) => { this.handleValueChange(event.valueText, 2); }}
+              preset='decimal' scale={0} min={15} max={30}
+              theme='material-dark' animate='fade'
+              headerText='Enter New Setpoint, Min: 15, Max: 30'/>
+            <h6>Min: 15, Max: 30</h6>
           </Col>
         </Row>
       </div>

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import './App.css';
+import '/home/pi/LMP_Parent/app/client/node_modules/@mobiscroll/react/dist/css/mobiscroll.min.css';
 import {
   Container
 } from 'reactstrap';
@@ -8,6 +9,7 @@ import RealtimeGraph from './realtimeGraph';
 import HistoricalGraph from './historicalGraph';
 import ConfigScreen from './configScrn';
 import {
+  BrowserRouter as Router,
   Route,
   Switch
 } from 'react-router-dom';
@@ -50,11 +52,13 @@ class App extends Component {
         <LmpNavbar />
         <Container>
           <Switch>
-            <Route path='/config' render={(props) => (
-                <ConfigScreen types={this.state.types} />
-            )}/>
-            <Route exact path="/" component={RealtimeGraph}/>
-            <Route exact path="/datalog" component={HistoricalGraph}/>
+            <Route exact path='/config' render={(props) => (
+                <ConfigScreen types={this.state.types} temp={{a:1}}/>
+            )} temp={{a:1}}/>
+            <Route exact path="/" component={RealtimeGraph} 
+              temp={{a:1}}/>
+            <Route exact path="/datalog" component={HistoricalGraph}
+              temp={{a:1}}/>
           </Switch>
         </Container>
       </div>

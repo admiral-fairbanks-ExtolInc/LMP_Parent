@@ -66,7 +66,7 @@ app.post('/server/updateSetpoint', (req, res) => {
   if (cycleRunning) return res.json({results: 'Unsuccessful'});
   if (change.title === 'Heater Melt Temp Setpoint') {
     let proposedSetting = parseInt(change.value);
-    if (proposedSetting < 1000 && proposedSetting > 0) {
+    if (proposedSetting < heaterHiLim && proposedSetting > 250) {
       childSettings.meltTemp = proposedSetting;
       res.json({results: 'Success'});
     }
@@ -74,7 +74,7 @@ app.post('/server/updateSetpoint', (req, res) => {
   }
   else if (change.title === 'Heater Release Temp Setpoint') {
     let proposedSetting = parseInt(change.value);
-    if (proposedSetting < heaterHiLim && proposedSetting > 0 && 
+    if (proposedSetting < heaterHiLim && proposedSetting > 100 && 
       proposedSetting < childSettings.meltTemp) {
       childSettings.releaseTemp = proposedSetting;
       res.json({results: 'Success'});
@@ -125,8 +125,6 @@ app.get('/server/getLastCycle', (req, res) => {
       .find({ "heaterID.heaterNumber": 1 }) 
       .sort({"heaterID.timestampID":-1}).limit(1)
       .toArray();
-    console.log(doc);
-    console.log(doc[0]);
     db.close();
     res.json(doc[0]);
   })

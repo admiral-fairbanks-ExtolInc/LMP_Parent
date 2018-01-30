@@ -37,6 +37,7 @@ export default class RealtimeGraph extends Component {
   componentDidMount() {
     window.addEventListener('resize', this.handleResize);
     this.handleResize();
+    this.turnOnRandomData();
   }
 
   componentWillUnmount() {
@@ -76,20 +77,17 @@ export default class RealtimeGraph extends Component {
   generateData() {
     const data = [];
     const xs = [];
-
-    let date = moment('2015-1-1 00:00', 'YYYY-MM-DD HH:mm');
-    for (let i = 1; i <= 12; i++) {
-      xs.push(date.format('D-MMM-YY HH:mm'));
-      date = date.add(1, 'hour');
+    for (let i = 0; i <= 150; i++) {
+      xs.push((-15000 + 100*i));
     }
     xs.forEach((x) => {
-      data.push({ x, y: 51 });
+      data.push({ x, y: 75 });
     });
     return data;
   }
 
   turnOnRandomData() {
-    this.setState({ randomDataIntervalId: setInterval(this.updateData, 200) });
+    this.setState({ randomDataIntervalId: setInterval(this.updateData, 100) });
   }
 
   turnOffRandomData() {
@@ -98,7 +96,6 @@ export default class RealtimeGraph extends Component {
   }
 
   updateData() {
-    const parseDate = parse('%d-%b-%y %H:%M');
     this.data.forEach((data) => {
       fetch('/server/tempInfo', {
         accept: 'application/json'
@@ -109,17 +106,14 @@ export default class RealtimeGraph extends Component {
         const error = new Error(`HTTP Error ${response.statusText}`);
         error.status = response.statusText;
         error.response = response;
-        console.log(error); // eslint-disable-line no-console
         throw error;
       }).then((response) => {
         return response.json();
       }).then((res) => {
-        data.shift();
-        let y = res.temp;
-        console.log(y);
-        const date = moment(parseDate(data[data.length - 1].x));
-        date.add(1, 'hour');
-        data.push({ x: date.format('D-MMM-YY HH:mm'), y });
+        for (let i = 0; i < data.length-1; i ++) {
+          data[i].y = data[i+1].y
+        }
+        data[data.length-1].y = res.temp;
       });
     });
 
@@ -158,23 +152,18 @@ export default class RealtimeGraph extends Component {
       <div>
         <Row>
           <Col xs='12'>
-            <h4>Begin Data Gathering</h4>
-            {(this.state.randomDataIntervalId)
-              ? <Button color="success" onClick={this.turnOffRandomData}>Turn Off Data Gathering</Button>
-              : <Button color="success" onClick={this.turnOnRandomData}>Turn On Gathering</Button>}
+            <h4>Realtime Temperature Data</h4>
           </Col>
         </Row>
         <br />
         <Row>
           <Col xs='12'>
             <LineChart
-              xType = {'time'}
               data={this.data}
-              datePattern={'%d-%b-%y %H:%M'}
               width={this.state.componentWidth}
               height={this.state.componentWidth / 1.75}
               yDomainRange={[0, 1000]}
-              axisLabels={{ x: 'Now', y: 'Temp (℉)' }}
+              axisLabels={{ x: 'Time (msec)', y: 'Temp (℉)' }}
               axes
               grid
               style={{
