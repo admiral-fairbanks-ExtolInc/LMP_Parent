@@ -16,7 +16,7 @@ const co = require('co');
 const assert = require('assert');
 
 let childAddresses = [];
-let numHeaters = [1];
+let numHeaters = [];
 let targetHeater=0;
 let statusBroadcasted;
 let statusProcessed = false;
@@ -78,7 +78,7 @@ function readData(status, cb) {
         }
         tempBuff = buffer;
         childInfo[key] = tempBuff;
-        //console.log(childInfo);
+        console.log(childInfo);
         return callback(null);
       })
     }, cb2);
@@ -212,7 +212,6 @@ function getAddresses() {
           if (elem < 35) {
             childAddresses.push(elem);
           }
-          console.log("I happened")
           if (ind === arr.length - 1) {
             console.log('Devices scanned: ' + childAddresses);
             i2cScanned = true;
@@ -227,6 +226,29 @@ function getAddresses() {
         if (err) throw err;
         cb(err);
       }));
+    },
+    (cb) => {
+      let readLength = 2;
+      async.eachOfSeries(childAddresses, (item, key, cb2) => {
+        async.retry({times:5, interval:5}, (callback, res) => {
+          i2c1.i2cRead(item, readLength, numHeaters[key],
+            (err, bytesRead, buffer) => {
+            if (err) {
+              console.log(err);
+              console.log(buffer);
+              callback(null);
+            }
+            numHeaters[key] = buffer.readInt8(1);
+            console.log(numHeaters[key]);
+            return callback(null);
+          })
+        }, cb2);
+      },
+      (err) => {
+        if (err) console.log("Error while reading");
+        //console.log(childInfo);
+        return cb(err);
+      })
     }
   ],
   (err) => {
