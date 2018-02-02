@@ -28,7 +28,6 @@ export default class CalibrateRTDButton extends React.Component {
   }
 
   render() {
-    let { title } = this.props.type;
     return (
       <Row>
         <Col>

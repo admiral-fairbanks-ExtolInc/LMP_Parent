@@ -106,7 +106,6 @@ function i2cHandling(settings, done) {
   else cycleStart = false;
   if (stopSigIn.Value || !enableSigIn.Value) cycleStop = true;
   else cycleStop = false;
-cycleRunningOut
   async.waterfall([
   (cb) => {
     readingAndLoggingActive = true;
@@ -139,7 +138,7 @@ cycleRunningOut
       broadcastBuffer.writeUInt16BE(updatedSettings.meltTemp, 5);
       broadcastBuffer.writeUInt16BE(updatedSettings.releaseTemp, 7);
       broadcastBuffer.writeUInt16BE(updatedSettings.maxHeaterOnTime*10, 9);
-      broadcastBuffer.writeUInt16BE(updatedSettings.dwellTime*10, 11);
+      broadcastBuffer.writeUInt16BE(updatedSettings.dwellTime, 11);
       //console.log(broadcastBuffer);
       Data.broadcastData(status, broadcastBuffer, cb);
     }
@@ -173,7 +172,7 @@ cycleRunningOut
     else cycleRunningOut.Value = 0;
     // Checks if all modules are at setpoint. If so, Parent needs
     // to send out Extend Press signal
-    if (childStatuses.every(elem => elem.heaterAtSetpoint)) {
+    if (childStatuses.every(elem => elem.extendPress)) {
       extendPressOut.Value = 1;
     }
     else {
@@ -282,7 +281,6 @@ function FSSigPinWatch(err, value) {
 function i2cIntervalTask(settings) {
   systemInitialized = Data.isSystemInitialized();
   systemInitInProgress = Data.isSystemInitInProgress();
-
   if (systemInitialized && !systemInitInProgress) {
     enableSigPin.read((err, val) => {
       if (err) throw(err);

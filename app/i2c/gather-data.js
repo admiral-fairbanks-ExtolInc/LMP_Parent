@@ -8,11 +8,11 @@ const main = require('./i2cRoutine');
 const i2c = require('i2c-bus');
 const i2cP = require('./my-i2c-bus')
 const chai = require('chai');
-const expect = chai.expect;
 const MongoClient = require('mongodb').MongoClient;
 const Server = require('mongodb').Server;
 const _ = require('lodash');
 const co = require('co');
+
 const assert = require('assert');
 
 let childAddresses = [];
@@ -35,34 +35,6 @@ const url = 'mongodb://localhost:27017/mydb';
 const dbName = 'heaterDatabase';
 const replyDatalog = 33;
 const replyNoDatalog = 3;
-const individualData = {
-  timestampId: moment().format('MMMM Do YYYY, h:mm:ss a'),
-  startData: {
-    startTime: 0,
-    startTemp: 0,
-    startPos: 0,
-  },
-  atSetpointData: {
-    atSetpointTime: 0,
-    atSetpointTemp: 0,
-    atSetpointPos: 0,
-  },
-  contactDipData: {
-    contactDipTime: 0,
-    contactDipTemp: 0,
-    contactDipPos: 0,
-  },
-  shutoffData: {
-    shutoffTime: 0,
-    shutoffTemp: 0,
-    shutoffPos: 0,
-  },
-  cycleCompleteData: {
-    cycleCompleteTime: 0,
-    cycleCompleteTemp: 0,
-    cycleCompletePos: 0,
-  },
-};
 
 // Broadcasts data to all children
 function broadcastData(status, statusMessageBuffer, cb) {
@@ -125,7 +97,7 @@ function processData(status, childInfo, cb) {
   const heaterStatus = {
     lmpTemps: [],
     heaterCycleRunning: false,
-    heaterAtSetpoint: false,
+    extendPress: false,
     coolingAirOn: false,
     heaterAtRelease: false,
     heaterCycleComplete: false,
@@ -136,7 +108,7 @@ function processData(status, childInfo, cb) {
     for (let i = 0, l = childInfo.length; i < l; i += 1) {
       const statusByte = childInfo[i].readInt8(0);
       if ((statusByte & 1) === 1) heaterStatus.heaterCycleRunning = true;
-      if ((statusByte & 2) === 2) heaterStatus.heaterAtSetpoint = true;
+      if ((statusByte & 2) === 2) heaterStatus.extendPress = true;
       if ((statusByte & 4) === 4) heaterStatus.coolingAirOn = true;
       if ((statusByte & 8) === 8) heaterStatus.heaterAtRelease = true;
       if ((statusByte & 16) === 16) heaterStatus.heaterCycleComplete = true;
@@ -157,34 +129,34 @@ function processData(status, childInfo, cb) {
       console.log("Connected correctly to server");
       //const gone = yield db.collection('heaterRecords').deleteMany({});
       const doc = {
-        heaterID: {
+        docID: {
           timestampID: new Date(),
           heaterNumber: 1 + datalogIndex + targetHeater,
+          docType: 'datalog'
         },
         dataLog: {
           startData: {
-            startTime: childInfo[datalogIndex].readInt16BE(3 + k),
+            startTime: childInfo[datalogIndex].readInt16BE(3 + k)/1000,
             startTemp: childInfo[datalogIndex].readInt16BE(5 + k) / 10,
           },
           atSetpointData: {
-            atSetpointTime: childInfo[datalogIndex].readInt16BE(7 + k),
+            atSetpointTime: childInfo[datalogIndex].readInt16BE(7 + k)/1000,
             atSetpointTemp: childInfo[datalogIndex].readInt16BE(9 + k) / 10,
           },
           contactDipData: {
-            contactDipTime: childInfo[datalogIndex].readInt16BE(11 + k),
+            contactDipTime: childInfo[datalogIndex].readInt16BE(11 + k)/1000,
             contactDipTemp: childInfo[datalogIndex].readInt16BE(13 + k) / 10,
           },
           shutoffData: {
-            shutoffTime: childInfo[datalogIndex].readInt16BE(15 + k),
+            shutoffTime: childInfo[datalogIndex].readInt16BE(15 + k)/1000,
             shutoffTemp: childInfo[datalogIndex].readInt16BE(17 + k) / 10,
           },
           cycleCompleteData: {
-            cycleCompleteTime: childInfo[datalogIndex].readInt16BE(19 + k),
+            cycleCompleteTime: childInfo[datalogIndex].readInt16BE(19 + k)/1000,
             cycleCompleteTemp: childInfo[datalogIndex].readInt16BE(21 + k) / 10,
           },
         }
       };
-      console.log(doc);
       const r = yield db.collection('heaterRecords').insertOne(doc);
       assert.equal(1, r.insertedCount);
       console.log(r.insertedCount);
@@ -235,12 +207,14 @@ function getAddresses() {
     (cb) => {
       i2c1.scan((err, dev) => {
         if (err) throw err;
+        console.log(dev);
         dev.forEach((elem, ind, arr) => {
           if (elem < 35) {
             childAddresses.push(elem);
           }
+          console.log("I happened")
           if (ind === arr.length - 1) {
-            console.log('3 devices scanned: ' + childAddresses);
+            console.log('Devices scanned: ' + childAddresses);
             i2cScanned = true;
             cb(err);
           }
@@ -286,6 +260,7 @@ module.exports = {
   readData: readData,
   processData: processData,
   updateValue: updateValue,
+
   isSystemInitialized: isSystemInitialized,
   isSystemInitInProgress: isSystemInitInProgress,
   RALA: RALA,

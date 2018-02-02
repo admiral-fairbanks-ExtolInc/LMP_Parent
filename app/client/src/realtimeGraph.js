@@ -2,9 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import {LineChart} from 'react-easy-chart';
 import ToolTip from './ToolTip';
-import moment from 'moment';
-import { timeParse as parse } from 'd3-time-format';
-import { Button, Row, Col } from 'reactstrap';
+import { Row, Col } from 'reactstrap';
 
 export default class RealtimeGraph extends Component {
   constructor(props) {
@@ -77,8 +75,8 @@ export default class RealtimeGraph extends Component {
   generateData() {
     const data = [];
     const xs = [];
-    for (let i = 0; i <= 150; i++) {
-      xs.push((-15000 + 100*i));
+    for (let i = 0; i <= 100; i++) {
+      xs.push((-15 + .1*i));
     }
     xs.forEach((x) => {
       data.push({ x, y: 75 });
@@ -87,7 +85,7 @@ export default class RealtimeGraph extends Component {
   }
 
   turnOnRandomData() {
-    this.setState({ randomDataIntervalId: setInterval(this.updateData, 100) });
+    this.setState({ randomDataIntervalId: setInterval(this.updateData, 250) });
   }
 
   turnOffRandomData() {
@@ -163,7 +161,7 @@ export default class RealtimeGraph extends Component {
               width={this.state.componentWidth}
               height={this.state.componentWidth / 1.75}
               yDomainRange={[0, 1000]}
-              axisLabels={{ x: 'Time (msec)', y: 'Temp (℉)' }}
+              axisLabels={{ x: 'Time (sec)', y: 'Temp (℉)' }}
               axes
               grid
               style={{

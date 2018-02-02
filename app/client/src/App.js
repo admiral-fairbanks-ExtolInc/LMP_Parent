@@ -8,8 +8,8 @@ import LmpNavbar from './nav';
 import RealtimeGraph from './realtimeGraph';
 import HistoricalGraph from './historicalGraph';
 import ConfigScreen from './configScrn';
+import AdminScreen from './adminScrn';
 import {
-  BrowserRouter as Router,
   Route,
   Switch
 } from 'react-router-dom';
@@ -59,6 +59,9 @@ class App extends Component {
               temp={{a:1}}/>
             <Route exact path="/datalog" component={HistoricalGraph}
               temp={{a:1}}/>
+            <Route exact path='/admin' render={(props) => (
+                <AdminScreen types={this.state.types} temp={{a:1}}/>
+            )} temp={{a:1}}/>
           </Switch>
         </Container>
       </div>

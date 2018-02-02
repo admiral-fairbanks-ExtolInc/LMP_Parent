@@ -2,9 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import {LineChart} from 'react-easy-chart';
 import ToolTip from './ToolTip';
-import moment from 'moment';
-import { timeParse as parse } from 'd3-time-format';
-import { Button, Row, Col } from 'reactstrap';
+import { Row, Col } from 'reactstrap';
 
 export default class HistoricalGraph extends Component {
   constructor(props) {
@@ -159,7 +157,7 @@ export default class HistoricalGraph extends Component {
               height={this.state.componentWidth / 1.75}
 
               yDomainRange={[0, 1000]}
-              axisLabels={{ x: 'Time (msec)', y: 'Temp (℉)' }}
+              axisLabels={{ x: 'Time (sec)', y: 'Temp (℉)' }}
               axes
               grid
               style={{

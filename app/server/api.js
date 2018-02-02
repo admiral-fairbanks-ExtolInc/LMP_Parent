@@ -17,7 +17,7 @@ const stopSigPin = new Gpio(6, 'in', 'both');
 const fullStrokePin = new Gpio(12, 'in', 'both');
 const childSettings = {
   meltTemp: 550,
-  releaseTemp: 120,
+  releaseTemp: 125,
   maxHeaterOnTime: 30,
   dwellTime: 0,
 };
@@ -26,8 +26,46 @@ const heaterHiLim = 1000;
 let count = 0;
 let childStatuses;
 
+co(function*() {
+  var db = yield MongoClient.connect(url);
+  var doc = yield db.collection('heaterRecords')
+    .find({ // This is looking to see if the settings document already exists
+      $and: [{ "docID.heaterNumber": 1 },
+        { "docID.docType": "settings" }] 
+    }).limit(1).toArray();
+  if (!doc[0]) { // if settings document doesn't exist, create it 
+    const doc = {
+      docID: {
+        timestampID: new Date(),
+        heaterNumber: 1,
+        docType: 'settings'
+      },
+      settings: {
+        meltTemp: 550,
+        releaseTemp: 125,
+        dwellTime: 0,
+        maxHeaterOnTime: 30,
+        rtdCalibrated: 0
+      }
+    };
+    const r = yield db.collection('heaterRecords').insertOne(doc);
+    assert.equal(1, r.insertedCount);
+    db.close();
+  }
+  else {
+    childSettings.meltTemp = doc[0].settings.meltTemp;
+    childSettings.releaseTemp = doc[0].settings.releaseTemp;
+    childSettings.maxHeaterOnTime = doc[0].settings.maxHeaterOnTime;
+    childSettings.dwellTime = doc[0].settings.dwellTime;
+    console.log(childSettings);
+    db.close();
+  }
+}).catch((err) => {
+  console.log(err);
+});
+
 const i2cTmr = setInterval(function() {
-  i2c.i2cIntervalTask(childSettings); }, 250);
+  i2c.i2cIntervalTask(childSettings); }, 200);
 
 enableSigPin.watch(i2c.enableSigPinWatch);
 startSigPin.watch(i2c.startSigPinWatch);
@@ -61,44 +99,85 @@ app.get('/server/tempInfo', (req, res) => {
 app.post('/server/updateSetpoint', (req, res) => {
   if (!req.body) return res.sendStatus(400);
   let change = req.body;
-  let success;
   let cycleRunning =  i2c.getRunningStatus();
   if (cycleRunning) return res.json({results: 'Unsuccessful'});
   if (change.title === 'Heater Melt Temp Setpoint') {
     let proposedSetting = parseInt(change.value);
-    if (proposedSetting < heaterHiLim && proposedSetting > 250) {
+    if (proposedSetting <= heaterHiLim && proposedSetting >= 250) {
       childSettings.meltTemp = proposedSetting;
-      res.json({results: 'Success'});
+      co(function*() { // This function deals with updating the settings document
+        var db = yield MongoClient.connect(url);
+        var doc = yield db.collection('heaterRecords')
+          .update({
+            $and: [{ "docID.heaterNumber": 1 },
+              { "docID.docType": "settings" }] 
+          }, { $set: {"settings.meltTemp": proposedSetting} })
+        console.log(doc);
+        res.json({results: 'Success'});
+      }).catch((err) => {
+        console.log(err);
+      });
     }
     else res.json({results: 'New Setpoint Outside of Allowable Range'});
   }
   else if (change.title === 'Heater Release Temp Setpoint') {
     let proposedSetting = parseInt(change.value);
-    if (proposedSetting < heaterHiLim && proposedSetting > 100 && 
-      proposedSetting < childSettings.meltTemp) {
+    if (proposedSetting <= heaterHiLim && proposedSetting >= 100 && 
+      proposedSetting <= childSettings.meltTemp) {
       childSettings.releaseTemp = proposedSetting;
-      res.json({results: 'Success'});
+      co(function*() { // This function deals with updating the settings document
+        var db = yield MongoClient.connect(url);
+        var doc = yield db.collection('heaterRecords')
+          .update({
+            $and: [{ "docID.heaterNumber": 1 },
+              { "docID.docType": "settings" }] 
+          }, { $set: {"settings.releaseTemp": proposedSetting} })
+        console.log(doc);
+        res.json({results: 'Success'});
+      }).catch((err) => {
+        console.log(err);
+      });
     }
     else res.json({results: 'New Setpoint Outside of Allowable Range'});
   }
   else if (change.title === 'Heater Maximum On Time') {
     let proposedSetting = parseInt(change.value);
-    if (proposedSetting < 30 && proposedSetting > 0) {
+    if (proposedSetting <= 30 && proposedSetting >= 15) {
       childSettings.maxHeaterOnTime = proposedSetting;
-      res.json({results: 'Success'});
+      co(function*() { // This function deals with updating the settings document
+        var db = yield MongoClient.connect(url);
+        var doc = yield db.collection('heaterRecords')
+          .update({
+            $and: [{ "docID.heaterNumber": 1 },
+              { "docID.docType": "settings" }] 
+          }, { $set: {"settings.maxHeaterOnTime": proposedSetting} })
+        console.log(doc);
+        res.json({results: 'Success'});
+      }).catch((err) => {
+        console.log(err);
+      });
     }
     else res.json({results: 'New Setpoint Outside of Allowable Range'});
   }
   else if (change.title === 'Heater Dwell Time') {
-    let proposedSetting = parseInt(change.value);
-    if (proposedSetting < 30 && proposedSetting > 0 && 
+    let proposedSetting = parseInt(parseFloat(change.value)*10);
+    if (proposedSetting <= 15 && proposedSetting >= 0 && 
       proposedSetting < childSettings.maxHeaterOnTime) {
       childSettings.dwellTime = proposedSetting;
-      res.json({results: 'Success'});
+      co(function*() { // This function deals with updating the settings document
+        var db = yield MongoClient.connect(url);
+        var doc = yield db.collection('heaterRecords')
+          .update({
+            $and: [{ "docID.heaterNumber": 1 },
+              { "docID.docType": "settings" }] 
+          }, { $set: {"settings.dwellTime": proposedSetting} })
+        console.log(doc);
+        res.json({results: 'Success'});
+      }).catch((err) => {
+        console.log(err);
+      });
     }
     else res.json({results: 'New Setpoint Outside of Allowable Range'});
-    childSettings.dwellTime = parseInt(change.value);
-    res.json({results: 'Success'});
   }
   else res.json({results: 'Invalid Settings Change'})
 });
@@ -108,11 +187,21 @@ app.post('/server/calibrateRtd', (req, res) => {
   let cycleRunning =  i2c.getRunningStatus();
   if (cycleRunning) return res.json({results: 'Unsuccessful'});
   let change = req.body;
-  let success;
   if (change.title === 'Calibrate RTD') {
     childSettings.calibrateRtd = true;
-    res.json({results: 'Success'});
-    i2c.engageRtdCalibration();
+    co(function*() { // This function deals with updating the settings document
+      var db = yield MongoClient.connect(url);
+      var doc = yield db.collection('heaterRecords')
+        .update({
+          $and: [{ "docID.heaterNumber": 1 },
+            { "docID.docType": "settings" }] 
+        }, { $set: {"settings.rtdCalibrated": 1} })
+      console.log(doc);
+      i2c.engageRtdCalibration();
+      res.json({results: 'Success'});
+    }).catch((err) => {
+      console.log(err);
+    });
   }
   else res.json({results: 'Calibration Failed'});
 });
@@ -122,12 +211,15 @@ app.get('/server/getLastCycle', (req, res) => {
   co(function*() {
     var db = yield MongoClient.connect(url);
     var doc = yield db.collection('heaterRecords')
-      .find({ "heaterID.heaterNumber": 1 }) 
-      .sort({"heaterID.timestampID":-1}).limit(1)
+      .find({
+        $and: [{ "docID.heaterNumber": 1 },
+          { "docID.docType": "datalog" }]
+      }) 
+      .sort({"docID.timestampID":-1}).limit(1)
       .toArray();
     db.close();
     res.json(doc[0]);
-  })
+  });
 });
 
 (err, results) => {
