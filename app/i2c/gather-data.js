@@ -33,8 +33,6 @@ let infoBuffers = new Array([childAddresses.length]);
 
 const url = 'mongodb://localhost:27017/mydb';
 const dbName = 'heaterDatabase';
-const replyDatalog = 33;
-const replyNoDatalog = 3;
 
 // Broadcasts data to all children
 function broadcastData(status, statusMessageBuffer, cb) {
@@ -64,10 +62,11 @@ function readData(status, cb) {
   const childInfo = [];
   let readLength;
   let targetChild;
-  if (!dataloggingInfo) readLength = 3; //update to be based on board heater number
-  else readLength = 23; // same
-  let tempBuff = Buffer.alloc(readLength);
   async.eachOfSeries(childAddresses, (item, key, cb2) => {
+    if (!dataloggingInfo) readLength = 1 + 2*numHeaters[key]; //update to be based on board heater number
+    else readLength = 1 + 22*numHeaters[key]; // same
+    //console.log(readLength);
+    let tempBuff = Buffer.alloc(readLength);
     async.retry({times:5, interval:5}, (callback, res) => {
       i2c1.i2cRead(item, readLength, tempBuff,
         (err, bytesRead, buffer) => {
@@ -78,14 +77,13 @@ function readData(status, cb) {
         }
         tempBuff = buffer;
         childInfo[key] = tempBuff;
-        console.log(childInfo);
+        //console.log(childInfo);
         return callback(null);
       })
     }, cb2);
   },
   (err) => {
     if (err) console.log("Error while reading");
-    //console.log(childInfo);
     return cb(null, status, childInfo);
   })
 };
@@ -114,62 +112,64 @@ function processData(status, childInfo, cb) {
       if ((statusByte & 16) === 16) heaterStatus.heaterCycleComplete = true;
       if ((statusByte & 32) === 32) heaterStatus.heaterFaulted = true;
       if ((statusByte & 64) === 64) heaterStatus.cycleDatalogged = true;
-      for (let j = 0; j < 4; j += 4) heaterStatus.lmpTemps[j] = childInfo[i]
-        .readInt16BE(1) / 10;
+      for (let j = 0; j < numHeaters[i]; j += 1) heaterStatus.lmpTemps[j] = childInfo[i]
+        .readInt16BE(1 + 2*j) / 10;
       overallStatus[i] = heaterStatus;
     }
     statusProcessed = true;
     statuses = overallStatus;
-    statusProcessed = false;
   }
   if (status[3]) {
-    const k = 20 * targetHeater;
     co(function*() {
       const db = yield MongoClient.connect(url);
-      console.log("Connected correctly to server");
       //const gone = yield db.collection('heaterRecords').deleteMany({});
-      const doc = {
-        docID: {
-          timestampID: new Date(),
-          heaterNumber: 1 + datalogIndex + targetHeater,
-          docType: 'datalog'
-        },
-        dataLog: {
-          startData: {
-            startTime: childInfo[datalogIndex].readInt16BE(3 + k)/1000,
-            startTemp: childInfo[datalogIndex].readInt16BE(5 + k) / 10,
+      let priorCount = numHeaters.slice(0, datalogIndex)
+        .reduce((a, b) => a + b, 0);
+      for (let j = 0; j < numHeaters[datalogIndex]; j++) {
+        const doc = {
+          docID: {
+            timestampID: new Date(),
+            heaterNumber: 1 + j + priorCount,
+            docType: 'datalog'
           },
-          atSetpointData: {
-            atSetpointTime: childInfo[datalogIndex].readInt16BE(7 + k)/1000,
-            atSetpointTemp: childInfo[datalogIndex].readInt16BE(9 + k) / 10,
-          },
-          contactDipData: {
-            contactDipTime: childInfo[datalogIndex].readInt16BE(11 + k)/1000,
-            contactDipTemp: childInfo[datalogIndex].readInt16BE(13 + k) / 10,
-          },
-          shutoffData: {
-            shutoffTime: childInfo[datalogIndex].readInt16BE(15 + k)/1000,
-            shutoffTemp: childInfo[datalogIndex].readInt16BE(17 + k) / 10,
-          },
-          cycleCompleteData: {
-            cycleCompleteTime: childInfo[datalogIndex].readInt16BE(19 + k)/1000,
-            cycleCompleteTemp: childInfo[datalogIndex].readInt16BE(21 + k) / 10,
-          },
-        }
-      };
-      const r = yield db.collection('heaterRecords').insertOne(doc);
-      assert.equal(1, r.insertedCount);
-      console.log(r.insertedCount);
-      db.close();
-    }).then((err) => {
-      if (err) throw (err);
-      targetHeater += 1;
-      console.log("target heater is: " + targetHeater);
-      if (targetHeater >= numHeaters[datalogIndex]) {
-        targetHeater = 0;
-        datalogIndex += 1;
-        console.log("datalog index is: " + datalogIndex);
+          dataLog: {
+            startData: {
+              startTime: childInfo[datalogIndex]
+                .readInt16BE(1 + 2*numHeaters[datalogIndex] + j*20)/1000,
+              startTemp: childInfo[datalogIndex]
+                .readInt16BE(3 + 2*numHeaters[datalogIndex] + j*20) / 10,
+            },
+            atSetpointData: {
+              atSetpointTime: childInfo[datalogIndex]
+                .readInt16BE(5 + 2*numHeaters[datalogIndex] + j*20)/1000,
+              atSetpointTemp: childInfo[datalogIndex]
+                .readInt16BE(7 + 2*numHeaters[datalogIndex] + j*20) / 10,
+            },
+            contactDipData: {
+              contactDipTime: childInfo[datalogIndex]
+                .readInt16BE(9 + 2*numHeaters[datalogIndex] + j*20)/1000,
+              contactDipTemp: childInfo[datalogIndex]
+                .readInt16BE(11 + 2*numHeaters[datalogIndex] + j*20) / 10,
+            },
+            shutoffData: {
+              shutoffTime: childInfo[datalogIndex]
+                .readInt16BE(13 + 2*numHeaters[datalogIndex] + j*20)/1000,
+              shutoffTemp: childInfo[datalogIndex]
+                .readInt16BE(15 + 2*numHeaters[datalogIndex] + j*20) / 10,
+            },
+            cycleCompleteData: {
+              cycleCompleteTime: childInfo[datalogIndex]
+                .readInt16BE(17 + 2*numHeaters[datalogIndex] + j*20)/1000,
+              cycleCompleteTemp: childInfo[datalogIndex]
+                .readInt16BE(19 + 2*numHeaters[datalogIndex] + j*20) / 10,
+            },
+          }
+        };
+        const r = yield db.collection('heaterRecords').insertOne(doc);
+        assert.equal(1, r.insertedCount);
       }
+      const r = yield db.close();
+      datalogIndex += 1;
       if (datalogIndex >= childInfo.length) {
         datalogIndex = 0;
         statusProcessed = false;
@@ -179,7 +179,7 @@ function processData(status, childInfo, cb) {
       }
       else {
         console.log("I happened again")
-        processData();
+        processData(status, childInfo, cb);
       }
     }).catch((err) => {
       console.log(err);
@@ -207,7 +207,6 @@ function getAddresses() {
     (cb) => {
       i2c1.scan((err, dev) => {
         if (err) throw err;
-        console.log(dev);
         dev.forEach((elem, ind, arr) => {
           if (elem < 35) {
             childAddresses.push(elem);
@@ -229,17 +228,18 @@ function getAddresses() {
     },
     (cb) => {
       let readLength = 2;
+      let tempBuff = Buffer.alloc(readLength);
       async.eachOfSeries(childAddresses, (item, key, cb2) => {
         async.retry({times:5, interval:5}, (callback, res) => {
-          i2c1.i2cRead(item, readLength, numHeaters[key],
-            (err, bytesRead, buffer) => {
+          i2c1.i2cRead(item, readLength, tempBuff,
+            (err, bytesRead, tempBuff) => {
             if (err) {
               console.log(err);
               console.log(buffer);
               callback(null);
             }
-            numHeaters[key] = buffer.readInt8(1);
-            console.log(numHeaters[key]);
+            numHeaters[key] = tempBuff.readInt8(1);
+            console.log("number of heaters: " + numHeaters[key]);
             return callback(null);
           })
         }, cb2);

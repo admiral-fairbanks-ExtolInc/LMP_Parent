@@ -112,7 +112,6 @@ function i2cHandling(settings, done) {
     if (cycleCompleteOut.Value && !logRequestSent) {
       dataloggingInfo = true;
       logRequestSent = true;
-      console.log("datalogging info true");
     }
     else if (!cycleCompleteOut.Value && logRequestSent) {
       logRequestSent = false;
@@ -148,7 +147,6 @@ function i2cHandling(settings, done) {
     }
     if (logRequestSent && dataloggingInfo) {
       dataloggingInfo = false;
-      console.log("datalogging info false");
     }
   },
   (status, cb) => {
@@ -178,6 +176,7 @@ function i2cHandling(settings, done) {
     else {
       extendPressOut.Value = 0;
     }
+    //console.log(childStatuses);
     // Checks if all modules are at release. If so, Parent needs
     // to send out Cooling Air signal
     if (childStatuses.every(elem => elem.coolingAirOn)) {
@@ -190,9 +189,11 @@ function i2cHandling(settings, done) {
     // Parent needs to send out Cycle Complete Signal
     if (childStatuses.every(elem => elem.cycleDatalogged)) {
       cycleCompleteOut.Value = 1;
+      //console.log("cyclecomplete true");
     }
     else {
       cycleCompleteOut.Value = 0;
+      //console.log("cyclecomplete false");
     }
     if (calibrateRtd) calibrateRtd = false;
     // Checks to see if any modules are faulted. If so, Parent
