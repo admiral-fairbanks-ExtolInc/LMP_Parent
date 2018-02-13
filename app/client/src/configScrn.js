@@ -12,7 +12,6 @@ class ConfigScreen extends Component {
 
     this.state = {
       values: [0, 0, 0, 0],
-      targetHeater: 0
     }
     this.handleValueChange = this.handleValueChange.bind(this);
   }
@@ -22,7 +21,9 @@ class ConfigScreen extends Component {
     let v = this.state.values.slice();
     v[ind] = val;
     this.setState({values: v});
-    if (this.props.types[ind].individuallyTracked) targ = this.state.targetHeater;
+    if (this.props.types[ind].individuallyTracked) {
+      targ = this.selectWheel1.state.value;
+    }
     else targ = 0;
     Axios({
       method: 'post',
