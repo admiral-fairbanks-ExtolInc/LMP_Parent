@@ -19,7 +19,7 @@ class HeaterSelectWheel extends Component {
   handleValueChange(val) {
     let v = this.state.value.slice();
     v = val;
-    this.setState({values: v});
+    this.setState({value: v});
   }
 
   render () {

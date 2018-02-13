@@ -50,6 +50,7 @@ class ConfigScreen extends Component {
           <Col>
             <h5>Melt Temp</h5>
             <mobiscroll.Numpad
+              value={this.state.values[0]}
               onSet={(event, inst) => { this.handleValueChange(event.valueText, 0); }}
               preset='decimal' scale={0} min={250} max={1000} suffix=' ℉'
               theme='material-dark' animate='fade'
@@ -59,6 +60,7 @@ class ConfigScreen extends Component {
           <Col>
             <h5>Release Temp</h5>
             <mobiscroll.Numpad
+              value={this.state.values[1]}
               onSet={(event, inst) => { this.handleValueChange(event.valueText, 1); }}
               preset='decimal' scale={0} min={100} max={1000} suffix=' ℉'
               theme='material-dark' animate='fade'
@@ -71,6 +73,7 @@ class ConfigScreen extends Component {
           <Col>
             <h5>Dwell Time</h5>
             <mobiscroll.Numpad
+              value={this.state.values[2]}
               onSet={(event, inst) => { this.handleValueChange(event.valueText, 3); }}
               preset='decimal' scale={1} min={0} max={15} suffix=' sec'
               theme='material-dark' animate='fade'
@@ -80,6 +83,7 @@ class ConfigScreen extends Component {
           <Col>
             <h5>Max Cycle Time</h5>
             <mobiscroll.Numpad
+              value={this.state.values[3]}
               onSet={(event, inst) => { this.handleValueChange(event.valueText, 2); }}
               preset='decimal' scale={0} min={15} max={30} suffix=' sec'
               theme='material-dark' animate='fade'

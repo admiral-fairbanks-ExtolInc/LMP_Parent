@@ -74,9 +74,9 @@ class App extends Component {
     }).then((response) => {
       return response.json();
     }).then((res) => {
-      let prevMax = this.state.systemData.max;
-      let prevMax = res.totalNumHeaters;
-      this.setState({systemData.max: prevMax})
+      let newSystemData = this.state.systemData;
+      newSystemData = res;
+      this.setState({systemData.max: newSystemData})
     });
   }
 

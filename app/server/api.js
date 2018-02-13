@@ -117,11 +117,24 @@ app.get('/server/tempInfo', (req, res) => {
 });
 
 app.get('/server/getSystemData', (req, res) => {
-  let totalNumHeaters = heaterAddresses.numHeaters.reduce((a, b) => a + b, 0);
-  let packet = {
-    totalNumHeaters: totalNumHeaters
-  };
-  res.json(packet);
+  co(function*() {
+    const db = yield MongoClient.connect(url);
+    const doc = yield db.collection('heaterRecords')
+      .find({ // This is looking to see if the settings document already exists
+        $and: [{ "docID.heaterNumber": 1 },
+          { "docID.docType": "settings" }]
+      }).limit(1).toArray();
+    const packet = {
+      settings: [
+        doc[0].settings.meltTemp,
+        doc[0].settings.releaseTemp,
+        doc[0].settings.dwellTime,
+        doc[0].settings.maxHeaterOnTime,
+      ],
+      totalNumHeaters: heaterAddresses.numHeaters.reduce((a, b) => a + b, 0)
+    }
+    res.json(packet);
+  })
 });
 
 app.post('/server/updateSetpoint', (req, res) => {
