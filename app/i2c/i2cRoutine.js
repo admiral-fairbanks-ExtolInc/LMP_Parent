@@ -80,12 +80,6 @@ let systemInitInProgress = false;
 let cycleStartSent = false;
 let cycleStart = false;
 let cycleStop = false;
-let updatedSettings = {
-  meltTemp: 550,
-  releaseTemp: 120,
-  maxHeaterOnTime: 30,
-  dwellTime: 0,
-};
 
 function readyForLogging() {
   return dataloggingInfo
@@ -94,7 +88,7 @@ function readyForLogging() {
 
 
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
-function i2cHandling(settings, done) {
+function i2cHandling(updateSettings, done) {
   if (readingAndLoggingActive) {
     console.log("read and log active, quitting");
     return;
@@ -119,26 +113,19 @@ function i2cHandling(settings, done) {
     let status = [cycleStart, cycleStop,
       fullStrokeSigIn.Value, dataloggingInfo, calibrateRtd];
     // Broadcast out Status
-    if (updatedSettings.meltTemp !== settings.meltTemp ||
-      updatedSettings.releaseTemp !== settings.releaseTemp ||
-      updatedSettings.maxHeaterOnTime !== settings.maxHeaterOnTime ||
-      updatedSettings.dwellTime !== settings.dwellTime) {
-      updatedSettings.meltTemp = settings.meltTemp;
-      updatedSettings.releaseTemp = settings.releaseTemp;
-      updatedSettings.maxHeaterOnTime = settings.maxHeaterOnTime;
-      updatedSettings.dwellTime = settings.dwellTime;
+    if (updateSettings.targetHeater !== -1) {
+
       console.log("settings updated");
-      let broadcastBuffer = Buffer.alloc(13);
+      let broadcastBuffer = Buffer.alloc(10);
       broadcastBuffer.writeUInt8(startSigIn.Value, 0);
       broadcastBuffer.writeUInt8(stopSigIn.Value, 1);
       broadcastBuffer.writeUInt8(fullStrokeSigIn.Value, 2);
       broadcastBuffer.writeUInt8(dataloggingInfo, 3);
       broadcastBuffer.writeUInt8(calibrateRtd, 4);
-      broadcastBuffer.writeUInt16BE(updatedSettings.meltTemp, 5);
-      broadcastBuffer.writeUInt16BE(updatedSettings.releaseTemp, 7);
-      broadcastBuffer.writeUInt16BE(updatedSettings.maxHeaterOnTime*10, 9);
-      broadcastBuffer.writeUInt16BE(updatedSettings.dwellTime, 11);
-      //console.log(broadcastBuffer);
+      broadcastBuffer.writeUInt8(updateSettings.heaterAddress, 5);
+      broadcastBuffer.writeUInt8(updateSettings.heaterPosn, 6);
+      broadcastBuffer.writeUInt8(updateSettings.settingToUpdate, 7);
+      broadcastBuffer.writeUInt16BE(updateSettings.settingValue, 8);
       Data.broadcastData(status, broadcastBuffer, cb);
     }
     else {
@@ -233,7 +220,7 @@ function i2cHandling(settings, done) {
     ], (err) => {
       cb(err);
     });
-    
+
   }], (err) => {
     if (done) {
       done(err);
@@ -243,6 +230,13 @@ function i2cHandling(settings, done) {
 
 function getChildInfo() {
   return childStatuses;
+}
+
+function getHeaterAddresses() {
+  return {
+    childAddresses: childAddresses,
+    numHeaters: numHeaters,
+  };
 }
 
 // Watch Input Pins, Update value accordingly
@@ -279,7 +273,7 @@ function FSSigPinWatch(err, value) {
 }
 // End Watch Input Pins
 
-function i2cIntervalTask(settings) {
+function i2cIntervalTask(updateSettings) {
   systemInitialized = Data.isSystemInitialized();
   systemInitInProgress = Data.isSystemInitInProgress();
   if (systemInitialized && !systemInitInProgress) {
@@ -287,7 +281,7 @@ function i2cIntervalTask(settings) {
       if (err) throw(err);
       enableSigIn.Value = val;
     })
-    i2cHandling(settings);
+    i2cHandling(updateSettings);
   }
   else if (!systemInitialized && !systemInitInProgress) {
     Data.setupLoop();
@@ -315,4 +309,5 @@ module.exports = {
   stopSigPinWatch: stopSigPinWatch,
   FSSigPinWatch: FSSigPinWatch,
   getRunningStatus: getRunningStatus,
+  getChildAddresses: getChildAddresses,
 };

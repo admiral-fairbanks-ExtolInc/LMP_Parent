@@ -23,27 +23,61 @@ class App extends Component {
       types: [
         {
           title: 'Heater Melt Temp Setpoint',
-          boilerplate: '550'
+          settingTitle: 'settings.meltTemp',
+          settingToChange: '0',
+          boilerplate: '550',
+          individuallyTracked: 0
         },
         {
           title: 'Heater Release Temp Setpoint',
-          boilerplate: '120'
+          settingTitle: 'settings.releaseTemp',
+          settingToChange: '1',
+          boilerplate: '120',
+          individuallyTracked: 0
         },
         {
           title: 'Heater Maximum On Time',
-          boilerplate: '30'
+          settingTitle: 'settings.maxHeaterOnTime',
+          settingToChange: '2',
+          boilerplate: '30',
+          individuallyTracked: 1
         },
         {
           title: 'Heater Dwell Time',
-          boilerplate: '0'
+          settingTitle: 'settings.dwellTime',
+          settingToChange: '3',
+          boilerplate: '0',
+          individuallyTracked: 1
         },
         {
           title: 'Calibrate RTD'
         }
       ],
-      showToolTip: false,
+      systemData: {
+        max: 0
+      }
       componentWidth: 300
     };
+  }
+
+  componentDidMount() {
+    fetch('/server/getSystemData', {
+      accept: 'application/json'
+    }).then((response) => {
+      if (response.status >= 200 && response.status < 300) {
+        return response;
+      }
+      const error = new Error(`HTTP Error ${response.statusText}`);
+      error.status = response.statusText;
+      error.response = response;
+      throw error;
+    }).then((response) => {
+      return response.json();
+    }).then((res) => {
+      let prevMax = this.state.systemData.max;
+      let prevMax = res.totalNumHeaters;
+      this.setState({systemData.max: prevMax})
+    });
   }
 
   render() {
@@ -53,9 +87,13 @@ class App extends Component {
         <Container>
           <Switch>
             <Route exact path='/config' render={(props) => (
-                <ConfigScreen types={this.state.types} temp={{a:1}}/>
+              <ConfigScreen
+                types={this.state.types}
+                max = {this.state.systemData.max}
+                temp={{a:1}}
+              />
             )} temp={{a:1}}/>
-            <Route exact path="/" component={RealtimeGraph} 
+            <Route exact path="/" component={RealtimeGraph}
               temp={{a:1}}/>
             <Route exact path="/datalog" component={HistoricalGraph}
               temp={{a:1}}/>
