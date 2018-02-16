@@ -26,57 +26,7 @@ const url = "mongodb://127.0.0.1:27017/mydb";
 const heaterHiLim = 1000;
 let count = 0;
 let childStatuses;
-
-co(function*() {
-  let heaterAddresses = getHeaterAddresses();
-  let totalNumHeaters = heaterAddresses.numHeaters.reduce((a, b) => a + b, 0);
-  let acc = 0;
-  let htrCntr = heaterAddresses.numHeaters[acc];
-  let addr = 0;
-  let posn = 0;
-  const db = yield MongoClient.connect(url);
-  for (i = 0; i <= totalNumHeaters; i++) {
-    if (i > htrCntr) { // this determines the address to associate with the target heater
-      acc += 1;
-      htrCntr = heaterAddresses.numHeaters.slice(0, acc + 1)
-        .reduce((a, b) => a + b, 0);
-      let addr = heaterAddresses.childAddresses[acc];
-    }
-    else if (i > 0) {
-      addr = heaterAddresses.childAddresses[acc];
-    }
-    if (acc > 0) posn = heaterAddresses.numHeaters[acc] - (htrCntr - i);
-    else posn = i;
-    const doc = yield db.collection('heaterRecords')
-      .find({ // This is looking to see if the settings document already exists
-        $and: [{ "docID.heaterNumber": i },
-          { "docID.docType": "settings" }]
-      }).limit(1).toArray();
-    if (!doc[0]) { // if settings document doesn't exist, create it
-      const doc = {
-        docID: {
-          timestampID: new Date(),
-          heaterNumber: i,
-          i2cAddress: addr,
-          heaterPosition: posn,
-          docType: 'settings'
-        },
-        settings: {
-          meltTemp: 550,
-          releaseTemp: 125,
-          dwellTime: 0,
-          maxHeaterOnTime: 30,
-          rtdCalibrated: 0
-        }
-      };
-      const r = yield db.collection('heaterRecords').insertOne(doc);
-      assert.equal(1, r.insertedCount);
-    }
-  }
-  db.close();
-}).catch((err) => {
-  console.log(err);
-});
+let i2cInitialized = false;
 
 const i2cTmr = setInterval(function() {
   i2c.i2cIntervalTask(toBeUpdated);
@@ -85,6 +35,65 @@ const i2cTmr = setInterval(function() {
   toBeUpdated.heaterPosn = 0;
   toBeUpdated.settingToUpdate = 0;
   toBeUpdated.settingValue = 0;
+  if (!i2cInitialized) {
+    let heaterAddresses = i2c.getHeaterAddresses();
+    let totalNumHeaters = heaterAddresses.numHeaters
+      .reduce((a, b) => a + b, 0);
+    if (totalNumHeaters > 0) {
+      co(function*() {
+        let acc = 0;
+        let htrCntr = heaterAddresses.numHeaters[acc];
+        let addr = 0;
+        let posn = 0;
+        const db = yield MongoClient.connect(url);
+        //const gone = yield db.collection('heaterRecords').deleteMany({});
+        //console.log(gone.deletedCount);
+        console.log(totalNumHeaters);
+        for (let i = 0; i <= totalNumHeaters; i++) {
+          if (i > htrCntr) { // this determines the address to associate with the target heater
+            acc += 1;
+            htrCntr = heaterAddresses.numHeaters.slice(0, acc + 1)
+              .reduce((a, b) => a + b, 0);
+            let addr = heaterAddresses.childAddresses[acc];
+          }
+          else if (i > 0) {
+            addr = heaterAddresses.childAddresses[acc];
+          }
+          if (acc > 0) posn = heaterAddresses.numHeaters[acc] - (htrCntr - i);
+          else posn = i;
+          const doc = yield db.collection('heaterRecords')
+            .find({ // This is looking to see if the settings document already exists
+              $and: [{ "docID.heaterNumber": i },
+                { "docID.docType": "settings" }]
+            }).limit(1).toArray();
+          if (!doc[0]) { // if settings document doesn't exist, create it
+            const doc = {
+              docID: {
+                timestampID: new Date(),
+                heaterNumber: i,
+                i2cAddress: addr,
+                heaterPosition: posn,
+                docType: 'settings'
+              },
+              settings: {
+                meltTemp: 550,
+                releaseTemp: 125,
+                dwellTime: 0,
+                maxHeaterOnTime: 30,
+                rtdCalibrated: 0
+              }
+            };
+            const r = yield db.collection('heaterRecords').insertOne(doc);
+            assert.equal(1, r.insertedCount);
+          }
+        }
+        i2cInitialized = true;
+        db.close();
+      }).catch((err) => {
+        console.log(err);
+      });
+    }
+  }
 }, 200);
 
 enableSigPin.watch(i2c.enableSigPinWatch);
@@ -124,6 +133,7 @@ app.get('/server/getSystemData', (req, res) => {
         $and: [{ "docID.heaterNumber": 1 },
           { "docID.docType": "settings" }]
       }).limit(1).toArray();
+    let heaterAddresses = i2c.getHeaterAddresses();
     const packet = {
       settings: [
         doc[0].settings.meltTemp,
@@ -139,11 +149,12 @@ app.get('/server/getSystemData', (req, res) => {
 
 app.post('/server/updateSetpoint', (req, res) => {
   if (!req.body) return res.sendStatus(400);
-  let heaterAddresses = getHeaterAddresses();
+  let heaterAddresses = i2c.getHeaterAddresses();
   let totalNumHeaters = heaterAddresses.numHeaters.reduce((a, b) => a + b, 0);
   let change = req.body;
   let cycleRunning =  i2c.getRunningStatus();
   let proposedValue = parseInt(change.value);
+  console.log(proposedValue);
   let targetHeater = parseInt(change.targetHeater);
   let settingToUpdate = parseInt(change.settingToUpdate);
   let settingTitle = change.settingTitle;
@@ -154,51 +165,52 @@ app.post('/server/updateSetpoint', (req, res) => {
   else {
     co(function*() {
       const db = yield MongoClient.connect(url);
-      else {
-        if ((proposedValue <= heaterHiLim && proposedValue >= 250 &&
-          settingTitle === possibilities[0]) ||
-          (proposedValue < 250 && proposedValue >= 100 &&
-          && settingTitle === possibilities[1]) ||
-          (proposedValue <= 30 && proposedValue >= 15 &&
-          settingTitle === possibilities[2]) ||
-          (proposedValue/10 < 15 && proposedValue/10 >= 0 &&
-          settingTitle === possibilities[3]) ||) {
-          if (targetHeater = 0) {
-            const doc = yield db.collection('heaterRecords')
-              .updateMany({ "docID.docType": "settings" },
-              { $set: {settingTitle: proposedValue} });
-            assert.equal(totalNumHeaters, doc.modifiedCount);
+      if ((proposedValue <= heaterHiLim && proposedValue >= 250 &&
+        settingTitle === possibilities[0]) ||
+        (proposedValue < 250 && proposedValue >= 100 &&
+        settingTitle === possibilities[1]) ||
+        (proposedValue <= 30 && proposedValue >= 15 &&
+        settingTitle === possibilities[2]) ||
+        (proposedValue/10 < 15 && proposedValue/10 >= 0 &&
+        settingTitle === possibilities[3])) {
+        if (targetHeater === 0) {
+          console.log("changing settings for all heaters");
+          const doc1 = yield db.collection('heaterRecords')
+            .updateMany({ "docID.docType": "settings" },
+            { $set: {settingTitle: proposedValue} });
+          assert.equal(totalNumHeaters, doc1.modifiedCount);
+          toBeUpdated.targetHeater = targetHeater;
+          toBeUpdated.settingToUpdate = settingToUpdate;
+          toBeUpdated.settingValue = proposedValue;
+        }
+        else {
+          console.log("changing settings for single heaters");
+          let doc1 = yield db.collection('heaterRecords')
+            .find({
+              $and: [{ "docID.heaterNumber": targetHeater },
+                { "docID.docType": "settings" }]
+            }).limit(1).toArray();
+          doc1 = doc1[0];
+          if (proposedValue === doc1[settingTitle]) res.json({results: 'Success'});
+          else {
             toBeUpdated.targetHeater = targetHeater;
+            toBeUpdated.heaterAddress = doc1.docID.i2cAddress;
+            toBeUpdated.heaterPosn = doc1.docID.heaterPosition;
             toBeUpdated.settingToUpdate = settingToUpdate;
             toBeUpdated.settingValue = proposedValue;
-          }
-          else {
-            const doc = yield db.collection('heaterRecords')
-              .find({
+            var doc2 = yield db.collection('heaterRecords')
+              .update({
                 $and: [{ "docID.heaterNumber": targetHeater },
                   { "docID.docType": "settings" }]
-              }).limit(1).toArray()[0];
-            if (proposedValue === doc[settingTitle]) res.json({results: 'Success'});
-            else {
-              toBeUpdated.targetHeater = targetHeater;
-              toBeUpdated.heaterAddress = doc.docID.i2cAddress;
-              toBeUpdated.heaterPosn = doc.docID.heaterPosition;
-              toBeUpdated.settingToUpdate = settingToUpdate;
-              toBeUpdated.settingValue = proposedValue;
-              var doc = yield db.collection('heaterRecords')
-                .update({
-                  $and: [{ "docID.heaterNumber": targetHeater },
-                    { "docID.docType": "settings" }]
-                }, { $set: {settingTitle: proposedValue} })
-              console.log(doc);
-              res.json({results: 'Success'});
-            }
+              }, { $set: {settingTitle: proposedValue} })
+            console.log(doc2);
+            res.json({results: 'Success'});
           }
         }
-        else res.json({results: 'New Setpoint Outside of Allowable Range'});
       }
+      else res.json({results: 'New Setpoint Outside of Allowable Range'});
       db.close();
-    }.catch((err) => {
+    }).catch((err) => {
       console.log(err);
     });
   }

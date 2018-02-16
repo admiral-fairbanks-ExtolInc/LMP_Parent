@@ -13,7 +13,6 @@ import {
   Route,
   Switch
 } from 'react-router-dom';
-import '../node_modules/react-touch-screen-keyboard/lib/Keyboard.css';
 class App extends Component {
   constructor(props) {
     super(props);
@@ -26,61 +25,44 @@ class App extends Component {
           settingTitle: 'settings.meltTemp',
           settingToChange: '0',
           boilerplate: '550',
-          individuallyTracked: 0
+          individuallyTracked: 1
         },
         {
           title: 'Heater Release Temp Setpoint',
           settingTitle: 'settings.releaseTemp',
           settingToChange: '1',
           boilerplate: '120',
-          individuallyTracked: 0
+          individuallyTracked: 1
         },
         {
           title: 'Heater Maximum On Time',
           settingTitle: 'settings.maxHeaterOnTime',
           settingToChange: '2',
           boilerplate: '30',
-          individuallyTracked: 1
+          individuallyTracked: 0
         },
         {
           title: 'Heater Dwell Time',
           settingTitle: 'settings.dwellTime',
           settingToChange: '3',
           boilerplate: '0',
-          individuallyTracked: 1
+          individuallyTracked: 0
         },
         {
           title: 'Calibrate RTD'
         }
       ],
-      systemData: {
-        max: 0
-      }
       componentWidth: 300
     };
   }
 
-  componentDidMount() {
-    fetch('/server/getSystemData', {
-      accept: 'application/json'
-    }).then((response) => {
-      if (response.status >= 200 && response.status < 300) {
-        return response;
-      }
-      const error = new Error(`HTTP Error ${response.statusText}`);
-      error.status = response.statusText;
-      error.response = response;
-      throw error;
-    }).then((response) => {
-      return response.json();
-    }).then((res) => {
-      let newSystemData = this.state.systemData;
-      newSystemData = res;
-      this.setState({systemData.max: newSystemData})
-    });
-  }
-
   render() {
+    const theme = {
+      upperRow: {
+        border: '3px solid #4775d1',
+        borderRadius: '15px'
+      }
+    }
     return (
       <div className="App" fluid='true'>
         <LmpNavbar />
@@ -89,8 +71,8 @@ class App extends Component {
             <Route exact path='/config' render={(props) => (
               <ConfigScreen
                 types={this.state.types}
-                max = {this.state.systemData.max}
                 temp={{a:1}}
+                theme={theme}
               />
             )} temp={{a:1}}/>
             <Route exact path="/" component={RealtimeGraph}

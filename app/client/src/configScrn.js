@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import './App.css';
 import { Row, Col } from 'reactstrap';
+import themeable from 'react-themeable';
 import CalibrateRTDButton from './calibrateRtdButton';
+import HeaterSelectWheel from './heaterSelectWheel';
 import mobiscroll from '/home/pi/LMP_Parent/app/client/node_modules/@mobiscroll/react/dist/js/mobiscroll.react.min.js';
 const Axios = require('axios');
 
@@ -12,8 +14,33 @@ class ConfigScreen extends Component {
 
     this.state = {
       values: [0, 0, 0, 0],
+      max: 0
     }
     this.handleValueChange = this.handleValueChange.bind(this);
+  }
+
+  componentDidMount() {
+    fetch('/server/getSystemData', {
+      accept: 'application/json'
+    }).then((response) => {
+      if (response.status >= 200 && response.status < 300) {
+        return response;
+      }
+      const error = new Error(`HTTP Error ${response.statusText}`);
+      error.status = response.statusText;
+      error.response = response;
+      throw error;
+    }).then((response) => {
+      return response.json();
+    }).then((res) => {
+      let newValues = this.state.values.slice();
+      let newMax = this.state.max;
+      Array.prototype.push.apply(newValues, res.settings);
+      newValues.splice(0, 4);
+      newMax = res.totalNumHeaters;
+      this.setState({values: newValues});
+      this.setState({max: newMax});
+    });
   }
 
   handleValueChange(val, ind) {
@@ -43,33 +70,41 @@ class ConfigScreen extends Component {
   }
 
   render () {
+    const theme = themeable(this.props.theme);
+
     return (
       <div>
         <br />
-        <Row>
-          <Col>
-            <h5>Melt Temp</h5>
-            <mobiscroll.Numpad
-              value={this.state.values[0]}
-              onSet={(event, inst) => { this.handleValueChange(event.valueText, 0); }}
-              preset='decimal' scale={0} min={250} max={1000} suffix=' ℉'
-              theme='material-dark' animate='fade'
-              headerText='Enter New Setpoint, Min: 250, Max: 1000'/>
-            <h6>Min: 250, Max: 1000</h6>
-          </Col>
-          <Col>
-            <h5>Release Temp</h5>
-            <mobiscroll.Numpad
-              value={this.state.values[1]}
-              onSet={(event, inst) => { this.handleValueChange(event.valueText, 1); }}
-              preset='decimal' scale={0} min={100} max={1000} suffix=' ℉'
-              theme='material-dark' animate='fade'
-              headerText='Enter New Setpoint, Min: 100, Max: 250'/>
-            <h6>Min: 100, Max: 1000</h6>
-          </Col>
-        </Row>
+        <div {...theme(1, 'upperRow')}>
+          <HeaterSelectWheel
+            ref={(selectWheel1) => {this.selectWheel1 = selectWheel1;}}
+            max={this.state.max}
+          />
+          <Row>
+            <Col >
+              <h5>Melt Temp</h5>
+              <mobiscroll.Numpad
+                value={this.state.values[0]}
+                onSet={(event, inst) => { this.handleValueChange(event.valueText, 0); }}
+                preset='decimal' scale={0} min={250} max={1000} suffix=' ℉'
+                theme='material-dark' animate='fade'
+                headerText='Enter New Setpoint, Min: 250, Max: 1000'/>
+              <h6>Min: 250, Max: 1000</h6>
+            </Col>
+            <Col>
+              <h5>Release Temp</h5>
+              <mobiscroll.Numpad
+                value={this.state.values[1]}
+                onSet={(event, inst) => { this.handleValueChange(event.valueText, 1); }}
+                preset='decimal' scale={0} min={100} max={1000} suffix=' ℉'
+                theme='material-dark' animate='fade'
+                headerText='Enter New Setpoint, Min: 100, Max: 250'/>
+              <h6>Min: 100, Max: 1000</h6>
+            </Col>
+          </Row>
+        </div>
         <br />
-        <Row>
+        <Row {...theme(1, 'upperRow')}>
           <Col>
             <h5>Dwell Time</h5>
             <mobiscroll.Numpad
@@ -91,10 +126,6 @@ class ConfigScreen extends Component {
             <h6>Min: 15, Max: 30</h6>
           </Col>
         </Row>
-        <HeaterSelectWheel
-          ref={(selectWheel1) => {this.selectWheel1 = selectWheel1;}
-          max={this.props.max}
-        />
       </div>
     )
   }

@@ -122,7 +122,6 @@ function processData(status, childInfo, cb) {
   if (status[3]) {
     co(function*() {
       const db = yield MongoClient.connect(url);
-      //const gone = yield db.collection('heaterRecords').deleteMany({});
       let priorCount = numHeaters.slice(0, datalogIndex)
         .reduce((a, b) => a + b, 0);
       for (let j = 0; j < numHeaters[datalogIndex]; j++) {
@@ -276,13 +275,21 @@ function RALA() {
   return readingAndLoggingActive;
 }
 
+function getHeaterAddresses() {
+  let infoPacket = {
+    childAddresses: childAddresses,
+    numHeaters: numHeaters,
+  }
+  return infoPacket;
+}
+
 module.exports = {
   setupLoop: setupLoop,
   broadcastData: broadcastData,
   readData: readData,
   processData: processData,
   updateValue: updateValue,
-
+  getHeaterAddresses: getHeaterAddresses,
   isSystemInitialized: isSystemInitialized,
   isSystemInitInProgress: isSystemInitInProgress,
   RALA: RALA,

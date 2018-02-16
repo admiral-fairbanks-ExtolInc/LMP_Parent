@@ -74,7 +74,6 @@ let dbCreated;
 let readingAndLoggingActive;
 let childStatuses = [];
 let logRequestSent;
-let heatersMapped;
 let systemInitialized = false;
 let systemInitInProgress = false;
 let cycleStartSent = false;
@@ -233,10 +232,8 @@ function getChildInfo() {
 }
 
 function getHeaterAddresses() {
-  return {
-    childAddresses: childAddresses,
-    numHeaters: numHeaters,
-  };
+  let infoPacket = Data.getHeaterAddresses();
+  return infoPacket;
 }
 
 // Watch Input Pins, Update value accordingly
@@ -298,7 +295,6 @@ function engageRtdCalibration() {
 }
 
 module.exports = {
-  heatersMapped: heatersMapped,
   logRequestSent: logRequestSent,
   getChildInfo: getChildInfo,
   engageRtdCalibration: engageRtdCalibration,
@@ -309,5 +305,5 @@ module.exports = {
   stopSigPinWatch: stopSigPinWatch,
   FSSigPinWatch: FSSigPinWatch,
   getRunningStatus: getRunningStatus,
-  getChildAddresses: getChildAddresses,
+  getHeaterAddresses: getHeaterAddresses,
 };

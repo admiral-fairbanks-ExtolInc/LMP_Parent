@@ -17,7 +17,7 @@ class HeaterSelectWheel extends Component {
   }
 
   handleValueChange(val) {
-    let v = this.state.value.slice();
+    let v = this.state.value;
     v = val;
     this.setState({value: v});
   }
@@ -32,6 +32,11 @@ class HeaterSelectWheel extends Component {
             <mobiscroll.Number
               min = {0}
               max = {this.props.max}
+              scale={0}
+              step={1}
+              animate='pop'
+              value = {this.state.value}
+              headerText='0 Applies Setting to All Heaters'
               onSet={(event, inst) => { this.handleValueChange(event.valueText, 0); }}
             />
           </Col>
