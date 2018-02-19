@@ -23,28 +23,28 @@ class App extends Component {
         {
           title: 'Heater Melt Temp Setpoint',
           settingTitle: 'settings.meltTemp',
-          settingToChange: '0',
+          settingToUpdate: '0',
           boilerplate: '550',
           individuallyTracked: 1
         },
         {
           title: 'Heater Release Temp Setpoint',
           settingTitle: 'settings.releaseTemp',
-          settingToChange: '1',
+          settingToUpdate: '1',
           boilerplate: '120',
           individuallyTracked: 1
         },
         {
           title: 'Heater Maximum On Time',
           settingTitle: 'settings.maxHeaterOnTime',
-          settingToChange: '2',
+          settingToUpdate: '2',
           boilerplate: '30',
           individuallyTracked: 0
         },
         {
           title: 'Heater Dwell Time',
           settingTitle: 'settings.dwellTime',
-          settingToChange: '3',
+          settingToUpdate: '3',
           boilerplate: '0',
           individuallyTracked: 0
         },

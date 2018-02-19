@@ -80,12 +80,6 @@ let cycleStartSent = false;
 let cycleStart = false;
 let cycleStop = false;
 
-function readyForLogging() {
-  return dataloggingInfo
-}
-
-
-
 // Sets up Timed interrupt for Reading/Writing I2C and Storing Data
 function i2cHandling(updateSettings, done) {
   if (readingAndLoggingActive) {
@@ -113,7 +107,6 @@ function i2cHandling(updateSettings, done) {
       fullStrokeSigIn.Value, dataloggingInfo, calibrateRtd];
     // Broadcast out Status
     if (updateSettings.targetHeater !== -1) {
-
       console.log("settings updated");
       let broadcastBuffer = Buffer.alloc(10);
       broadcastBuffer.writeUInt8(startSigIn.Value, 0);
@@ -299,7 +292,6 @@ module.exports = {
   getChildInfo: getChildInfo,
   engageRtdCalibration: engageRtdCalibration,
   i2cIntervalTask: i2cIntervalTask,
-  readyForLogging: readyForLogging,
   enableSigPinWatch: enableSigPinWatch,
   startSigPinWatch: startSigPinWatch,
   stopSigPinWatch: stopSigPinWatch,

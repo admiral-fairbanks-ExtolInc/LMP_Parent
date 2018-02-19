@@ -26,7 +26,8 @@ const url = "mongodb://127.0.0.1:27017/mydb";
 const heaterHiLim = 1000;
 let count = 0;
 let childStatuses;
-let i2cInitialized = false;
+let settingsInitialized = false;
+let initInProgress = false;
 
 const i2cTmr = setInterval(function() {
   i2c.i2cIntervalTask(toBeUpdated);
@@ -35,10 +36,11 @@ const i2cTmr = setInterval(function() {
   toBeUpdated.heaterPosn = 0;
   toBeUpdated.settingToUpdate = 0;
   toBeUpdated.settingValue = 0;
-  if (!i2cInitialized) {
+  if (!settingsInitialized && !initInProgress) {
     let heaterAddresses = i2c.getHeaterAddresses();
     let totalNumHeaters = heaterAddresses.numHeaters
       .reduce((a, b) => a + b, 0);
+    initInProgress = true;
     if (totalNumHeaters > 0) {
       co(function*() {
         let acc = 0;
@@ -66,6 +68,7 @@ const i2cTmr = setInterval(function() {
               $and: [{ "docID.heaterNumber": i },
                 { "docID.docType": "settings" }]
             }).limit(1).toArray();
+          console.log(doc[0]);
           if (!doc[0]) { // if settings document doesn't exist, create it
             const doc = {
               docID: {
@@ -87,7 +90,8 @@ const i2cTmr = setInterval(function() {
             assert.equal(1, r.insertedCount);
           }
         }
-        i2cInitialized = true;
+        settingsInitialized = true;
+        initInProgress = false;
         db.close();
       }).catch((err) => {
         console.log(err);
@@ -154,9 +158,9 @@ app.post('/server/updateSetpoint', (req, res) => {
   let change = req.body;
   let cycleRunning =  i2c.getRunningStatus();
   let proposedValue = parseInt(change.value);
-  console.log(proposedValue);
   let targetHeater = parseInt(change.targetHeater);
   let settingToUpdate = parseInt(change.settingToUpdate);
+  console.log(settingToUpdate);
   let settingTitle = change.settingTitle;
   let possibilities = ['settings.meltTemp', 'settings.releaseTemp',
     'settings.maxHeaterOnTime', 'settings.dwellTime'];
@@ -175,10 +179,11 @@ app.post('/server/updateSetpoint', (req, res) => {
         settingTitle === possibilities[3])) {
         if (targetHeater === 0) {
           console.log("changing settings for all heaters");
+          let set = {};
+          set[settingTitle] = proposedValue;
           const doc1 = yield db.collection('heaterRecords')
             .updateMany({ "docID.docType": "settings" },
-            { $set: {settingTitle: proposedValue} });
-          assert.equal(totalNumHeaters, doc1.modifiedCount);
+            { $set: set });
           toBeUpdated.targetHeater = targetHeater;
           toBeUpdated.settingToUpdate = settingToUpdate;
           toBeUpdated.settingValue = proposedValue;
@@ -198,11 +203,13 @@ app.post('/server/updateSetpoint', (req, res) => {
             toBeUpdated.heaterPosn = doc1.docID.heaterPosition;
             toBeUpdated.settingToUpdate = settingToUpdate;
             toBeUpdated.settingValue = proposedValue;
+            let set = {};
+            set[settingTitle] = proposedValue;
             var doc2 = yield db.collection('heaterRecords')
               .update({
                 $and: [{ "docID.heaterNumber": targetHeater },
                   { "docID.docType": "settings" }]
-              }, { $set: {settingTitle: proposedValue} })
+              }, { $set: set })
             console.log(doc2);
             res.json({results: 'Success'});
           }
@@ -222,7 +229,6 @@ app.post('/server/calibrateRtd', (req, res) => {
   if (cycleRunning) return res.json({results: 'Unsuccessful'});
   let change = req.body;
   if (change.title === 'Calibrate RTD') {
-    childSettings.calibrateRtd = true;
     co(function*() { // This function deals with updating the settings document
       var db = yield MongoClient.connect(url);
       var doc = yield db.collection('heaterRecords')
